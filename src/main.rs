@@ -121,7 +121,6 @@ fn spawn_players(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-
     for player in &players {
         commands.entity(player).despawn_recursive();
     }
@@ -169,6 +168,7 @@ fn spawn_players(
 fn start_matchbox_socket(mut commands: Commands) {
     let room_url = "ws://127.0.0.1:3536/extreme_bevy?next=2";
     commands.insert_resource(MatchboxSocket::new_ggrs(room_url));
+    info!("started matchbox socket");
 }
 
 fn wait_for_players(
@@ -187,7 +187,6 @@ fn wait_for_players(
     if players.len() < num_players {
         return;
     }
-
 
     let mut session_builder = ggrs::SessionBuilder::<Config>::new()
         .with_num_players(num_players)
@@ -216,13 +215,13 @@ fn handle_ggrs_events(mut session: ResMut<Session<Config>>) {
             for event in s.events() {
                 match event {
                     GgrsEvent::Disconnected { .. } | GgrsEvent::NetworkInterrupted { .. } => {
+                        error!("disconnected");
                     }
-                    GgrsEvent::DesyncDetected {
-                        local_checksum,
-                        remote_checksum,
-                        frame,
-                        ..
-                    } => {
+                    GgrsEvent::DesyncDetected { .. } => {
+                        error!("desynced");
+                    }
+                    _ => {
+                        error!("unexpected event: {event:?}");
                     }
                 }
             }
