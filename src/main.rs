@@ -284,6 +284,8 @@ fn fire_bullets(
     for (&transform, player, mut bullet_ready, move_dir) in &mut players {
         let (input, _) = inputs[player.handle];
         if fire(input) && bullet_ready.0 {
+            let player_pos = transform.translation;
+            let pos = player_pos + move_dir.0 * 0.6;
             commands
                 .spawn((
                     Bullet,
@@ -297,7 +299,7 @@ fn fire_bullets(
                             .unwrap(),
                         ),
                         material: materials.add(Color::RED.into()),
-                        transform,
+                        transform: Transform::from_translation(pos),
                         ..Default::default()
                     },
                 ))
