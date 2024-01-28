@@ -375,12 +375,6 @@ fn possition_window(
     winit_windows: NonSend<WinitWindows>,
     window_query: Query<Entity, With<PrimaryWindow>>,
 ) {
-    /*     let w = window_query.get_single().unwrap();
-       println!("1w----> {:?}", w);
-       let w = winit_windows.get_window(w);
-       println!("2w----> {:?}", w);
-
-    */
     let display_size = if let Some(monitor) = window_query
         .get_single()
         .ok()
