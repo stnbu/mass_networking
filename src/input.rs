@@ -36,7 +36,6 @@ pub fn read_local_inputs(
 
         local_inputs.insert(*handle, input);
     }
-
     commands.insert_resource(LocalInputs::<Config>(local_inputs));
 }
 

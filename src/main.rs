@@ -23,7 +23,6 @@ type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 #[derive(States, Clone, Eq, PartialEq, Debug, Hash, Default)]
 enum GameState {
     #[default]
-    AssetLoading,
     Matchmaking,
     InGame,
 }
@@ -52,9 +51,6 @@ impl Default for RoundEndTimer {
 fn main() {
     App::new()
         .add_state::<GameState>()
-        .add_loading_state(
-            LoadingState::new(GameState::AssetLoading).continue_to_state(GameState::Matchmaking),
-        )
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -74,7 +70,6 @@ fn main() {
         .rollback_component_with_copy::<BulletReady>()
         .rollback_component_with_copy::<Player>()
         .rollback_component_with_copy::<MoveDir>()
-        .rollback_component_with_clone::<Sprite>()
         .rollback_component_with_clone::<GlobalTransform>()
         .rollback_component_with_clone::<Handle<Image>>()
         .rollback_component_with_clone::<Visibility>()
@@ -123,7 +118,7 @@ const MAP_SIZE: i32 = 41;
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 0.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(-0.5, -0.5, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
 }
@@ -149,8 +144,8 @@ fn spawn_players(
     commands
         .spawn(PbrBundle {
             mesh: meshes.add(
-                Mesh::try_from(shape::Icosphere {
-                    radius: 1.0,
+                Mesh::try_from(shape::Cube {
+                    size: 1.0,
                     ..Default::default()
                 })
                 .unwrap(),
@@ -163,8 +158,8 @@ fn spawn_players(
     commands
         .spawn(PbrBundle {
             mesh: meshes.add(
-                Mesh::try_from(shape::Icosphere {
-                    radius: 1.0,
+                Mesh::try_from(shape::Cube {
+                    size: 1.0,
                     ..Default::default()
                 })
                 .unwrap(),
@@ -188,16 +183,15 @@ fn wait_for_players(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if socket.get_channel(0).is_err() {
-        return; // we've already started
+        return;
     }
 
-    // Check for new connections
     socket.update_peers();
     let players = socket.players();
 
     let num_players = 2;
     if players.len() < num_players {
-        return; // wait for more players
+        return;
     }
 
     info!("All peers have joined, going in-game");
