@@ -85,16 +85,8 @@ fn main() {
                 reload_bullet,
                 fire_bullets.after(move_players).after(reload_bullet),
                 move_bullet.after(fire_bullets),
-                kill_players.after(move_bullet).after(move_players),
             )
                 .run_if(in_state(RollbackState::InRound))
-                .after(apply_state_transition::<RollbackState>),
-        )
-        .add_systems(
-            GgrsSchedule,
-            round_end_timeout
-                .run_if(in_state(RollbackState::RoundEnd))
-                .ambiguous_with(kill_players)
                 .after(apply_state_transition::<RollbackState>),
         )
         .run();
@@ -351,33 +343,3 @@ fn move_bullet(mut bullets: Query<(&mut Transform, &MoveDir), With<Bullet>>, tim
 
 const PLAYER_RADIUS: f32 = 0.5;
 const BULLET_RADIUS: f32 = 0.05;
-
-fn kill_players(
-    mut commands: Commands,
-    players: Query<(Entity, &Transform, &Player), Without<Bullet>>,
-    bullets: Query<&Transform, With<Bullet>>,
-    mut next_state: ResMut<NextState<RollbackState>>,
-) {
-    for (player_entity, player_transform, player) in &players {
-        for bullet_transform in &bullets {
-            let distance =
-                Vec3::distance(player_transform.translation, bullet_transform.translation);
-            if distance < PLAYER_RADIUS + BULLET_RADIUS {
-                commands.entity(player_entity).despawn_recursive();
-                next_state.set(RollbackState::RoundEnd);
-            }
-        }
-    }
-}
-
-fn round_end_timeout(
-    mut timer: ResMut<RoundEndTimer>,
-    mut state: ResMut<NextState<RollbackState>>,
-    time: Res<Time>,
-) {
-    timer.tick(time.delta());
-
-    if timer.just_finished() {
-        state.set(RollbackState::InRound);
-    }
-}
