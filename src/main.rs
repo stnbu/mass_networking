@@ -1,8 +1,4 @@
 use bevy::prelude::*;
-use bevy_egui::{
-    egui::{self, Align2, Color32, FontId, RichText},
-    EguiContexts, EguiPlugin,
-};
 use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, *};
 use bevy_matchbox::prelude::*;
 use bevy_roll_safe::prelude::*;
@@ -26,7 +22,6 @@ enum GameState {
 enum RollbackState {
     #[default]
     InRound,
-    RoundEnd,
 }
 
 #[derive(Resource, Clone, Deref, DerefMut)]
@@ -50,7 +45,6 @@ fn main() {
                 ..default()
             }),
             GgrsPlugin::<Config>::default(),
-            EguiPlugin,
         ))
         .add_ggrs_state::<RollbackState>()
         .rollback_resource_with_clone::<RoundEndTimer>()
