@@ -93,18 +93,13 @@ fn main() {
         .init_resource::<Scores>()
         .add_systems(
             OnEnter(GameState::Matchmaking),
-            (setup, start_matchbox_socket.run_if(p2p_mode)),
+            (setup, start_matchbox_socket),
         )
         .add_systems(
             Update,
             (
-                (
-                    wait_for_players.run_if(p2p_mode),
-                    start_synctest_session.run_if(synctest_mode),
-                )
-                    .run_if(in_state(GameState::Matchmaking)),
-                (camera_follow, update_score_ui, handle_ggrs_events)
-                    .run_if(in_state(GameState::InGame)),
+                wait_for_players.run_if(in_state(GameState::Matchmaking)),
+                (update_score_ui, handle_ggrs_events).run_if(in_state(GameState::InGame)),
             ),
         )
         .add_systems(ReadInputs, read_local_inputs)
@@ -138,14 +133,6 @@ const GRID_WIDTH: f32 = 0.05;
 struct ImageAssets {
     #[asset(path = "bullet.png")]
     bullet: Handle<Image>,
-}
-
-fn synctest_mode(args: Res<Args>) -> bool {
-    args.synctest
-}
-
-fn p2p_mode(args: Res<Args>) -> bool {
-    !args.synctest
 }
 
 fn setup(mut commands: Commands) {
@@ -291,26 +278,6 @@ fn wait_for_players(
     next_state.set(GameState::InGame);
 }
 
-fn start_synctest_session(mut commands: Commands, mut next_state: ResMut<NextState<GameState>>) {
-    info!("Starting synctest session");
-    let num_players = 2;
-
-    let mut session_builder = ggrs::SessionBuilder::<Config>::new().with_num_players(num_players);
-
-    for i in 0..num_players {
-        session_builder = session_builder
-            .add_player(PlayerType::Local, i)
-            .expect("failed to add player");
-    }
-
-    let ggrs_session = session_builder
-        .start_synctest_session()
-        .expect("failed to start session");
-
-    commands.insert_resource(bevy_ggrs::Session::SyncTest(ggrs_session));
-    next_state.set(GameState::InGame);
-}
-
 fn handle_ggrs_events(mut session: ResMut<Session<Config>>) {
     match session.as_mut() {
         Session::P2P(s) => {
@@ -442,26 +409,6 @@ fn kill_players(
                 }
                 info!("player died: {scores:?}")
             }
-        }
-    }
-}
-
-fn camera_follow(
-    local_players: Res<LocalPlayers>,
-    players: Query<(&Player, &Transform)>,
-    mut cameras: Query<&mut Transform, (With<Camera>, Without<Player>)>,
-) {
-    for (player, player_transform) in &players {
-        // only follow the local player
-        if !local_players.0.contains(&player.handle) {
-            continue;
-        }
-
-        let pos = player_transform.translation;
-
-        for mut transform in &mut cameras {
-            transform.translation.x = pos.x;
-            transform.translation.y = pos.y;
         }
     }
 }
