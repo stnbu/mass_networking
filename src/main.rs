@@ -114,6 +114,8 @@ fn setup(mut commands: Commands) {
     });
 }
 
+use std::f32::consts::TAU;
+
 fn spawn_players(
     mut commands: Commands,
     players: Query<Entity, With<Player>>,
@@ -142,11 +144,28 @@ fn spawn_players(
                     })
                     .unwrap(),
                 ),
-                material: materials.add(Color::rgb(0.4, 0., 0.).into()),
-                transform: Transform::from_translation(Vec3::new(-2.0, 0.0, 0.0)),
+                material: materials.add(Color::GREEN.into()),
+                transform: Transform::from_translation(Vec3::new(-2.0, 0.0, 0.0))
+                    .with_rotation(Quat::from_rotation_y(TAU / -4.0)),
                 ..Default::default()
             },
         ))
+        .with_children(|child| {
+            child.spawn(PbrBundle {
+                mesh: meshes.add(
+                    Mesh::try_from(shape::Capsule {
+                        radius: 0.05,
+                        depth: 1.0,
+                        ..Default::default()
+                    })
+                    .unwrap(),
+                ),
+                material: materials.add(Color::WHITE.into()),
+                transform: Transform::from_rotation(Quat::from_rotation_x(TAU / 4.0))
+                    .with_translation(Vec3::Z * -1.0),
+                ..Default::default()
+            });
+        })
         .add_rollback();
     commands
         .spawn((
@@ -161,11 +180,28 @@ fn spawn_players(
                     })
                     .unwrap(),
                 ),
-                material: materials.add(Color::rgb(0.0, 0.4, 0.).into()),
-                transform: Transform::from_translation(Vec3::new(2.0, 0.0, 0.0)),
+                material: materials.add(Color::BLUE.into()),
+                transform: Transform::from_translation(Vec3::new(2.0, 0.0, 0.0))
+                    .with_rotation(Quat::from_rotation_y(TAU / 4.0)),
                 ..Default::default()
             },
         ))
+        .with_children(|child| {
+            child.spawn(PbrBundle {
+                mesh: meshes.add(
+                    Mesh::try_from(shape::Capsule {
+                        radius: 0.05,
+                        depth: 1.0,
+                        ..Default::default()
+                    })
+                    .unwrap(),
+                ),
+                material: materials.add(Color::WHITE.into()),
+                transform: Transform::from_rotation(Quat::from_rotation_x(TAU / 4.0))
+                    .with_translation(Vec3::Z * -1.0),
+                ..Default::default()
+            });
+        })
         .add_rollback();
 }
 
