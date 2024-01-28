@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::camera::ScalingMode};
+use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_egui::{
     egui::{self, Align2, Color32, FontId, RichText},
@@ -7,7 +7,7 @@ use bevy_egui::{
 use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, *};
 use bevy_matchbox::prelude::*;
 use bevy_roll_safe::prelude::*;
-use clap::Parser;
+
 use components::*;
 use input::*;
 
@@ -55,7 +55,6 @@ fn main() {
         .add_loading_state(
             LoadingState::new(GameState::AssetLoading).continue_to_state(GameState::Matchmaking),
         )
-        .add_collection_to_loading_state::<_, ImageAssets>(GameState::AssetLoading)
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -121,13 +120,6 @@ fn main() {
 }
 
 const MAP_SIZE: i32 = 41;
-const GRID_WIDTH: f32 = 0.05;
-
-#[derive(AssetCollection, Resource)]
-struct ImageAssets {
-    #[asset(path = "bullet.png")]
-    bullet: Handle<Image>,
-}
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
@@ -301,7 +293,6 @@ fn reload_bullet(
 fn fire_bullets(
     mut commands: Commands,
     inputs: Res<PlayerInputs<Config>>,
-    images: Res<ImageAssets>,
     mut players: Query<(&Transform, &Player, &mut BulletReady, &MoveDir)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -310,7 +301,7 @@ fn fire_bullets(
         let (input, _) = inputs[player.handle];
         if fire(input) && bullet_ready.0 {
             let player_pos = transform.translation;
-            let pos = player_pos + move_dir.0 * PLAYER_RADIUS + BULLET_RADIUS;
+            let _pos = player_pos + move_dir.0 * PLAYER_RADIUS + BULLET_RADIUS;
             commands
                 .spawn(PbrBundle {
                     mesh: meshes.add(
