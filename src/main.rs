@@ -13,10 +13,6 @@ use input::*;
 mod components;
 mod input;
 
-// The first generic parameter, u8, is the input type: 4-directions + fire fits
-// easily in a single byte
-// The second parameter is the address type of peers: Matchbox' WebRtcSocket
-// addresses are called `PeerId`s
 type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 
 #[derive(States, Clone, Eq, PartialEq, Debug, Hash, Default)]
@@ -28,10 +24,8 @@ enum GameState {
 
 #[derive(States, Clone, Eq, PartialEq, Debug, Hash, Default)]
 enum RollbackState {
-    /// When the characters running and gunning
     #[default]
     InRound,
-    /// When one character is dead, and we're transitioning to the next round
     RoundEnd,
 }
 
@@ -53,7 +47,6 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    // fill the entire browser window
                     fit_canvas_to_parent: true,
                     ..default()
                 }),
@@ -138,7 +131,6 @@ fn spawn_players(
         commands.entity(bullet).despawn_recursive();
     }
 
-    // Player 1
     commands
         .spawn((
             Player { handle: 0 },
@@ -198,7 +190,6 @@ fn wait_for_players(
 
     let num_players = 2;
     if players.len() < num_players {
-        //error!("less than 2 players XXXXXXXZZZZZZ");
         return;
     }
 
@@ -206,7 +197,6 @@ fn wait_for_players(
     info!("XXXXXXX All peers have joined, going in-game");
     info!("XXXXXXX All peers have joined, going in-game");
 
-    // create a GGRS P2P session
     let mut session_builder = ggrs::SessionBuilder::<Config>::new()
         .with_num_players(num_players)
         .with_desync_detection_mode(DesyncDetection::On { interval: 1 })
@@ -218,10 +208,8 @@ fn wait_for_players(
             .expect("failed to add player");
     }
 
-    // move the channel out of the socket (required because GGRS takes ownership of it)
     let socket = socket.take_channel(0).unwrap();
 
-    // start the GGRS session
     let ggrs_session = session_builder
         .start_p2p_session(socket)
         .expect("failed to start session");
