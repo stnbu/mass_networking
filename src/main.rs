@@ -281,22 +281,26 @@ fn fire_bullets(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (&transform, player, mut bullet_ready, _) in &mut players {
+    for (&transform, player, mut bullet_ready, move_dir) in &mut players {
         let (input, _) = inputs[player.handle];
         if fire(input) && bullet_ready.0 {
             commands
-                .spawn(PbrBundle {
-                    mesh: meshes.add(
-                        Mesh::try_from(shape::Icosphere {
-                            radius: 0.1,
-                            ..Default::default()
-                        })
-                        .unwrap(),
-                    ),
-                    material: materials.add(Color::RED.into()),
-                    transform,
-                    ..Default::default()
-                })
+                .spawn((
+                    Bullet,
+                    *move_dir,
+                    PbrBundle {
+                        mesh: meshes.add(
+                            Mesh::try_from(shape::Icosphere {
+                                radius: 0.1,
+                                ..Default::default()
+                            })
+                            .unwrap(),
+                        ),
+                        material: materials.add(Color::RED.into()),
+                        transform,
+                        ..Default::default()
+                    },
+                ))
                 .add_rollback();
             bullet_ready.0 = false;
         }
