@@ -313,11 +313,11 @@ fn reload_bullet(
 fn fire_bullets(
     mut commands: Commands,
     inputs: Res<PlayerInputs<Config>>,
-    mut players: Query<(&Transform, &Player, &mut BulletReady, &MoveDir)>,
+    mut players: Query<(&Transform, &Player, &mut BulletReady)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (&transform, player, mut bullet_ready, move_dir) in &mut players {
+    for (&transform, player, mut bullet_ready) in &mut players {
         let (input, _) = inputs[player.handle];
         if fire(input) && bullet_ready.0 {
             let player_pos = transform.translation;
