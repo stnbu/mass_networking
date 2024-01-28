@@ -121,7 +121,6 @@ fn spawn_players(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    info!("Spawning players");
 
     for player in &players {
         commands.entity(player).despawn_recursive();
@@ -169,9 +168,6 @@ fn spawn_players(
 
 fn start_matchbox_socket(mut commands: Commands) {
     let room_url = "ws://127.0.0.1:3536/extreme_bevy?next=2";
-    info!("XXXXXXX connecting to matchbox server: {room_url}");
-    info!("XXXXXXX connecting to matchbox server: {room_url}");
-    info!("XXXXXXX connecting to matchbox server: {room_url}");
     commands.insert_resource(MatchboxSocket::new_ggrs(room_url));
 }
 
@@ -181,7 +177,6 @@ fn wait_for_players(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if socket.get_channel(0).is_err() {
-        error!("IS_ERR!!!! XXXXXXXZZZZZZ");
         return;
     }
 
@@ -193,9 +188,6 @@ fn wait_for_players(
         return;
     }
 
-    info!("XXXXXXX All peers have joined, going in-game");
-    info!("XXXXXXX All peers have joined, going in-game");
-    info!("XXXXXXX All peers have joined, going in-game");
 
     let mut session_builder = ggrs::SessionBuilder::<Config>::new()
         .with_num_players(num_players)
@@ -224,7 +216,6 @@ fn handle_ggrs_events(mut session: ResMut<Session<Config>>) {
             for event in s.events() {
                 match event {
                     GgrsEvent::Disconnected { .. } | GgrsEvent::NetworkInterrupted { .. } => {
-                        warn!("GGRS event: {event:?}")
                     }
                     GgrsEvent::DesyncDetected {
                         local_checksum,
@@ -232,9 +223,7 @@ fn handle_ggrs_events(mut session: ResMut<Session<Config>>) {
                         frame,
                         ..
                     } => {
-                        error!("Desync on frame {frame}. Local checksum: {local_checksum:X}, remote checksum: {remote_checksum:X}");
                     }
-                    _ => info!("GGRS event: {event:?}"),
                 }
             }
         }
@@ -247,9 +236,7 @@ fn move_players(
     inputs: Res<PlayerInputs<Config>>,
     time: Res<Time>,
 ) {
-    error!("XXXmopo");
     for (mut transform, mut move_direction, player) in &mut players {
-        error!("XXXmoving player: {}", player.handle);
         let (input, _) = inputs[player.handle];
 
         let direction = direction(input);
@@ -344,7 +331,6 @@ fn kill_players(
                 } else {
                     scores.0 += 1;
                 }
-                info!("player died: {scores:?}")
             }
         }
     }
