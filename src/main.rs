@@ -321,15 +321,16 @@ fn fire_bullets(
         let (input, _) = inputs[player.handle];
         if fire(input) && bullet_ready.0 {
             let player_pos = transform.translation;
-            let pos = player_pos + move_dir.0 * PLAYER_RADIUS + BULLET_RADIUS;
+            let forward = -transform.local_z();
+            let pos = player_pos + forward * PLAYER_RADIUS + BULLET_RADIUS;
             commands
                 .spawn((
                     Bullet,
-                    *move_dir,
+                    MoveDir(forward),
                     PbrBundle {
                         mesh: meshes.add(
                             Mesh::try_from(shape::Icosphere {
-                                radius: 0.1,
+                                radius: 0.04,
                                 ..Default::default()
                             })
                             .unwrap(),
