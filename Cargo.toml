@@ -13,7 +13,3 @@ bevy_matchbox = { version = "0.8", features = ["ggrs"] }
 clap = { version = "4.4", features = ["derive"] }
 bevy_roll_safe = "0.1"
 bevy_egui = "0.23"
-
-[[bin]]
-name = "orig"
-path = "src/bin/orig.rs"
