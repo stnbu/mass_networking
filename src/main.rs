@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_asset_loader::prelude::*;
 use bevy_egui::{
     egui::{self, Align2, Color32, FontId, RichText},
     EguiContexts, EguiPlugin,
@@ -71,7 +70,6 @@ fn main() {
         .rollback_component_with_copy::<Player>()
         .rollback_component_with_copy::<MoveDir>()
         .rollback_component_with_clone::<GlobalTransform>()
-        .rollback_component_with_clone::<Handle<Image>>()
         .rollback_component_with_clone::<Visibility>()
         .rollback_component_with_clone::<InheritedVisibility>()
         .rollback_component_with_clone::<ViewVisibility>()
@@ -142,38 +140,46 @@ fn spawn_players(
 
     // Player 1
     commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(
-                Mesh::try_from(shape::Cube {
-                    size: 1.0,
-                    ..Default::default()
-                })
-                .unwrap(),
-            ),
-            material: materials.add(Color::rgb(0.4, 0., 0.).into()),
-            transform: Transform::from_translation(Vec3::new(-2.0, 0.0, 0.0)),
-            ..Default::default()
-        })
+        .spawn((
+            Player { handle: 0 },
+            PbrBundle {
+                mesh: meshes.add(
+                    Mesh::try_from(shape::Cube {
+                        size: 1.0,
+                        ..Default::default()
+                    })
+                    .unwrap(),
+                ),
+                material: materials.add(Color::rgb(0.4, 0., 0.).into()),
+                transform: Transform::from_translation(Vec3::new(-2.0, 0.0, 0.0)),
+                ..Default::default()
+            },
+        ))
         .add_rollback();
     commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(
-                Mesh::try_from(shape::Cube {
-                    size: 1.0,
-                    ..Default::default()
-                })
-                .unwrap(),
-            ),
-            material: materials.add(Color::rgb(0.0, 0.4, 0.).into()),
-            transform: Transform::from_translation(Vec3::new(2.0, 0.0, 0.0)),
-            ..Default::default()
-        })
+        .spawn((
+            Player { handle: 1 },
+            PbrBundle {
+                mesh: meshes.add(
+                    Mesh::try_from(shape::Cube {
+                        size: 1.0,
+                        ..Default::default()
+                    })
+                    .unwrap(),
+                ),
+                material: materials.add(Color::rgb(0.0, 0.4, 0.).into()),
+                transform: Transform::from_translation(Vec3::new(2.0, 0.0, 0.0)),
+                ..Default::default()
+            },
+        ))
         .add_rollback();
 }
 
 fn start_matchbox_socket(mut commands: Commands) {
     let room_url = "ws://127.0.0.1:3536/extreme_bevy?next=2";
-    info!("connecting to matchbox server: {room_url}");
+    info!("XXXXXXX connecting to matchbox server: {room_url}");
+    info!("XXXXXXX connecting to matchbox server: {room_url}");
+    info!("XXXXXXX connecting to matchbox server: {room_url}");
     commands.insert_resource(MatchboxSocket::new_ggrs(room_url));
 }
 
@@ -183,6 +189,7 @@ fn wait_for_players(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if socket.get_channel(0).is_err() {
+        error!("IS_ERR!!!! XXXXXXXZZZZZZ");
         return;
     }
 
@@ -191,10 +198,13 @@ fn wait_for_players(
 
     let num_players = 2;
     if players.len() < num_players {
+        //error!("less than 2 players XXXXXXXZZZZZZ");
         return;
     }
 
-    info!("All peers have joined, going in-game");
+    info!("XXXXXXX All peers have joined, going in-game");
+    info!("XXXXXXX All peers have joined, going in-game");
+    info!("XXXXXXX All peers have joined, going in-game");
 
     // create a GGRS P2P session
     let mut session_builder = ggrs::SessionBuilder::<Config>::new()
@@ -249,7 +259,9 @@ fn move_players(
     inputs: Res<PlayerInputs<Config>>,
     time: Res<Time>,
 ) {
+    error!("XXXmopo");
     for (mut transform, mut move_direction, player) in &mut players {
+        error!("XXXmoving player: {}", player.handle);
         let (input, _) = inputs[player.handle];
 
         let direction = direction(input);
