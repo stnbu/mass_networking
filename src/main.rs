@@ -1,9 +1,11 @@
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
+use bevy::winit::WinitWindows;
 use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, *};
 use bevy_matchbox::prelude::*;
 use bevy_roll_safe::prelude::*;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use components::*;
 use input::*;
 
@@ -12,13 +14,20 @@ mod input;
 
 type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
 
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(ValueEnum, Clone, Debug, Default)]
+pub enum Side {
+    #[default]
+    Left,
+    Right,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Parser, Resource, Debug, Clone)]
 pub struct Args {
     /// runs the game in synctest mode
-    #[clap(long)]
-    pub synctest: bool,
-    #[clap(long, default_value = "2")]
-    pub input_delay: usize,
+    #[arg(long, value_enum)]
+    pub side: Side,
 }
 
 #[derive(States, Clone, Eq, PartialEq, Debug, Hash, Default)]
@@ -44,19 +53,21 @@ impl Default for RoundEndTimer {
 }
 
 fn main() {
-    App::new()
-        .add_state::<GameState>()
-        .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    fit_canvas_to_parent: true,
-                    ..default()
-                }),
+    let mut app = App::new();
+    app.add_state::<GameState>();
+
+    #[cfg(target_arch = "wasm32")]
+    app.add_plugins((
+        DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                fit_canvas_to_parent: true,
                 ..default()
             }),
-            GgrsPlugin::<Config>::default(),
-        ))
-        .add_ggrs_state::<RollbackState>()
+            ..default()
+        }),
+        GgrsPlugin::<Config>::default(),
+    ));
+    app.add_ggrs_state::<RollbackState>()
         .rollback_resource_with_clone::<RoundEndTimer>()
         .rollback_component_with_clone::<Transform>()
         .rollback_component_with_copy::<BulletReady>()
@@ -92,8 +103,17 @@ fn main() {
             )
                 .run_if(in_state(RollbackState::InRound))
                 .after(apply_state_transition::<RollbackState>),
-        )
-        .run();
+        );
+
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_plugins((DefaultPlugins, GgrsPlugin::<Config>::default()));
+    #[cfg(not(target_arch = "wasm32"))]
+    let args = Args::parse();
+    #[cfg(not(target_arch = "wasm32"))]
+    app.insert_resource(args)
+        .add_systems(OnEnter(GameState::InGame), possition_window);
+
+    app.run();
 }
 
 const MAP_SIZE: i32 = 41;
@@ -105,7 +125,7 @@ fn setup(mut commands: Commands) {
     });
 }
 
-use std::f32::consts::TAU;
+use std::{default, f32::consts::TAU};
 
 fn spawn_players(
     mut commands: Commands,
@@ -347,3 +367,44 @@ fn move_bullet(mut bullets: Query<(&mut Transform, &MoveDir), With<Bullet>>, tim
 
 const PLAYER_RADIUS: f32 = 0.5;
 const BULLET_RADIUS: f32 = 0.05;
+
+#[cfg(not(target_arch = "wasm32"))]
+fn possition_window(
+    args: Res<Args>,
+    mut windows: Query<&mut Window>,
+    winit_windows: NonSend<WinitWindows>,
+    window_query: Query<Entity, With<PrimaryWindow>>,
+) {
+    /*     let w = window_query.get_single().unwrap();
+       println!("1w----> {:?}", w);
+       let w = winit_windows.get_window(w);
+       println!("2w----> {:?}", w);
+
+    */
+    let display_size = if let Some(monitor) = window_query
+        .get_single()
+        .ok()
+        .and_then(|entity| winit_windows.get_window(entity))
+        .and_then(|winit_window| winit_window.current_monitor())
+    {
+        monitor.size()
+    } else {
+        panic!("No monitor found!");
+    };
+
+    let display_width = display_size.width;
+    let display_height = display_size.height;
+
+    let window_width = display_width / 4.0 as u32;
+    let window_height = display_height / 4.0 as u32;
+    let window_x = match args.side {
+        Side::Left => 0,
+        Side::Right => display_width - (window_width * 2),
+    };
+
+    let mut window = windows.single_mut();
+    window
+        .resolution
+        .set(window_width as f32, window_height as f32);
+    window.position.set(IVec2::new(window_x as i32, 0.0 as i32));
+}
