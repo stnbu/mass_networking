@@ -285,7 +285,7 @@ fn fire_bullets(
         let (input, _) = inputs[player.handle];
         if fire(input) && bullet_ready.0 {
             let player_pos = transform.translation;
-            let pos = player_pos + move_dir.0 * 0.6;
+            let pos = player_pos + move_dir.0 * PLAYER_RADIUS + BULLET_RADIUS;
             commands
                 .spawn((
                     Bullet,
@@ -318,7 +318,7 @@ fn move_bullet(mut bullets: Query<(&mut Transform, &MoveDir), With<Bullet>>, tim
 }
 
 const PLAYER_RADIUS: f32 = 0.5;
-const BULLET_RADIUS: f32 = 0.025;
+const BULLET_RADIUS: f32 = 0.05;
 
 fn kill_players(
     mut commands: Commands,
