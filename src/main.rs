@@ -32,9 +32,6 @@ enum RollbackState {
 #[derive(Resource, Clone, Deref, DerefMut)]
 struct RoundEndTimer(Timer);
 
-#[derive(Resource, Default, Clone, Copy, Debug)]
-struct Scores(u32, u32);
-
 impl Default for RoundEndTimer {
     fn default() -> Self {
         RoundEndTimer(Timer::from_seconds(1.0, TimerMode::Repeating))
@@ -57,7 +54,6 @@ fn main() {
         ))
         .add_ggrs_state::<RollbackState>()
         .rollback_resource_with_clone::<RoundEndTimer>()
-        .rollback_resource_with_copy::<Scores>()
         .rollback_component_with_clone::<Transform>()
         .rollback_component_with_copy::<BulletReady>()
         .rollback_component_with_copy::<Player>()
@@ -69,7 +65,6 @@ fn main() {
         .checksum_component::<Transform>(checksum_transform)
         .insert_resource(ClearColor(Color::rgb(0.53, 0.53, 0.53)))
         .init_resource::<RoundEndTimer>()
-        .init_resource::<Scores>()
         .add_systems(
             OnEnter(GameState::Matchmaking),
             (setup, start_matchbox_socket),
@@ -78,7 +73,7 @@ fn main() {
             Update,
             (
                 wait_for_players.run_if(in_state(GameState::Matchmaking)),
-                (update_score_ui, handle_ggrs_events).run_if(in_state(GameState::InGame)),
+                (handle_ggrs_events).run_if(in_state(GameState::InGame)),
             ),
         )
         .add_systems(ReadInputs, read_local_inputs)
@@ -362,7 +357,6 @@ fn kill_players(
     players: Query<(Entity, &Transform, &Player), Without<Bullet>>,
     bullets: Query<&Transform, With<Bullet>>,
     mut next_state: ResMut<NextState<RollbackState>>,
-    mut scores: ResMut<Scores>,
 ) {
     for (player_entity, player_transform, player) in &players {
         for bullet_transform in &bullets {
@@ -371,12 +365,6 @@ fn kill_players(
             if distance < PLAYER_RADIUS + BULLET_RADIUS {
                 commands.entity(player_entity).despawn_recursive();
                 next_state.set(RollbackState::RoundEnd);
-
-                if player.handle == 0 {
-                    scores.1 += 1;
-                } else {
-                    scores.0 += 1;
-                }
             }
         }
     }
@@ -392,18 +380,4 @@ fn round_end_timeout(
     if timer.just_finished() {
         state.set(RollbackState::InRound);
     }
-}
-
-fn update_score_ui(mut contexts: EguiContexts, scores: Res<Scores>) {
-    let Scores(p1_score, p2_score) = *scores;
-
-    egui::Area::new("score")
-        .anchor(Align2::CENTER_TOP, (0., 25.))
-        .show(contexts.ctx_mut(), |ui| {
-            ui.label(
-                RichText::new(format!("{p1_score} - {p2_score}"))
-                    .color(Color32::BLACK)
-                    .font(FontId::proportional(72.0)),
-            );
-        });
 }
