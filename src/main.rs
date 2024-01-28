@@ -235,10 +235,13 @@ fn move_players(
     inputs: Res<PlayerInputs<Config>>,
     time: Res<Time>,
 ) {
+    debug!(target: "mg", ".");
     for (mut transform, mut move_direction, player) in &mut players {
+        let _handle = player.handle;
         let (input, _) = inputs[player.handle];
 
         let direction = direction(input);
+        let _direction = format!("{:.2}/{:.2}/{:.2}", direction.x, direction.y, direction.z);
 
         if direction == Vec3::ZERO {
             continue;
@@ -248,10 +251,22 @@ fn move_players(
 
         let move_speed = 7.;
         let move_delta = direction * move_speed * time.delta_seconds();
+        let _move_delta = format!(
+            "{:.2}/{:.2}/{:.2}",
+            move_delta.x, move_delta.y, move_delta.z
+        );
 
         let old_pos = transform.translation;
         let limit = Vec3::splat(MAP_SIZE as f32 / 2. - 0.5);
         let new_pos = (old_pos + move_delta).clamp(-limit, limit);
+        let _actual_move = format!(
+            "{:.2}/{:.2}/{:.2}",
+            new_pos.x - old_pos.x,
+            new_pos.y - old_pos.y,
+            new_pos.z - old_pos.z
+        );
+
+        debug!(target: "mp", "player {_handle}: dir:{_direction} -> del:{_move_delta} -> actl:{_actual_move}");
 
         transform.translation.x = new_pos.x;
         transform.translation.y = new_pos.y;
