@@ -297,11 +297,9 @@ fn fire_bullets(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (transform, player, mut bullet_ready, move_dir) in &mut players {
+    for (&transform, player, mut bullet_ready, _) in &mut players {
         let (input, _) = inputs[player.handle];
         if fire(input) && bullet_ready.0 {
-            let player_pos = transform.translation;
-            let _pos = player_pos + move_dir.0 * PLAYER_RADIUS + BULLET_RADIUS;
             commands
                 .spawn(PbrBundle {
                     mesh: meshes.add(
@@ -312,7 +310,7 @@ fn fire_bullets(
                         .unwrap(),
                     ),
                     material: materials.add(Color::RED.into()),
-                    transform: Transform::from_translation(Vec3::new(-2.0, 0.0, 0.0)),
+                    transform,
                     ..Default::default()
                 })
                 .add_rollback();
