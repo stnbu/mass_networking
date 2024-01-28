@@ -3,6 +3,7 @@ use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, *};
 use bevy_matchbox::prelude::*;
 use bevy_roll_safe::prelude::*;
 
+use clap::Parser;
 use components::*;
 use input::*;
 
@@ -10,6 +11,15 @@ mod components;
 mod input;
 
 type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
+
+#[derive(Parser, Resource, Debug, Clone)]
+pub struct Args {
+    /// runs the game in synctest mode
+    #[clap(long)]
+    pub synctest: bool,
+    #[clap(long, default_value = "2")]
+    pub input_delay: usize,
+}
 
 #[derive(States, Clone, Eq, PartialEq, Debug, Hash, Default)]
 enum GameState {
