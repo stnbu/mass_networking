@@ -40,8 +40,8 @@ pub fn read_local_inputs(
     commands.insert_resource(LocalInputs::<Config>(local_inputs));
 }
 
-pub fn direction(input: u8) -> Vec2 {
-    let mut direction = Vec2::ZERO;
+pub fn direction(input: u8) -> Vec3 {
+    let mut direction = Vec3::ZERO;
     if input & INPUT_UP != 0 {
         direction.y += 1.;
     }

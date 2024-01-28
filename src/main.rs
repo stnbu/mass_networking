@@ -1,4 +1,3 @@
-use args::Args;
 use bevy::{prelude::*, render::camera::ScalingMode};
 use bevy_asset_loader::prelude::*;
 use bevy_egui::{
@@ -12,7 +11,6 @@ use clap::Parser;
 use components::*;
 use input::*;
 
-mod args;
 mod components;
 mod input;
 
@@ -52,11 +50,7 @@ impl Default for RoundEndTimer {
 }
 
 fn main() {
-    let args = Args::parse();
-    eprintln!("{args:?}");
-
     App::new()
-        .insert_resource(args)
         .add_state::<GameState>()
         .add_loading_state(
             LoadingState::new(GameState::AssetLoading).continue_to_state(GameState::Matchmaking),
@@ -136,49 +130,18 @@ struct ImageAssets {
 }
 
 fn setup(mut commands: Commands) {
-    // Horizontal lines
-    for i in 0..=MAP_SIZE {
-        commands.spawn(SpriteBundle {
-            transform: Transform::from_translation(Vec3::new(
-                0.,
-                i as f32 - MAP_SIZE as f32 / 2.,
-                0.,
-            )),
-            sprite: Sprite {
-                color: Color::rgb(0.27, 0.27, 0.27),
-                custom_size: Some(Vec2::new(MAP_SIZE as f32, GRID_WIDTH)),
-                ..default()
-            },
-            ..default()
-        });
-    }
-
-    // Vertical lines
-    for i in 0..=MAP_SIZE {
-        commands.spawn(SpriteBundle {
-            transform: Transform::from_translation(Vec3::new(
-                i as f32 - MAP_SIZE as f32 / 2.,
-                0.,
-                0.,
-            )),
-            sprite: Sprite {
-                color: Color::rgb(0.27, 0.27, 0.27),
-                custom_size: Some(Vec2::new(GRID_WIDTH, MAP_SIZE as f32)),
-                ..default()
-            },
-            ..default()
-        });
-    }
-
-    let mut camera_bundle = Camera2dBundle::default();
-    camera_bundle.projection.scaling_mode = ScalingMode::FixedVertical(10.);
-    commands.spawn(camera_bundle);
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(0.0, 0.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ..default()
+    });
 }
 
 fn spawn_players(
     mut commands: Commands,
     players: Query<Entity, With<Player>>,
     bullets: Query<Entity, With<Bullet>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     info!("Spawning players");
 
@@ -192,38 +155,32 @@ fn spawn_players(
 
     // Player 1
     commands
-        .spawn((
-            Player { handle: 0 },
-            BulletReady(true),
-            MoveDir(-Vec2::X),
-            SpriteBundle {
-                transform: Transform::from_translation(Vec3::new(-2., 0., 100.)),
-                sprite: Sprite {
-                    color: Color::rgb(0., 0.47, 1.),
-                    custom_size: Some(Vec2::new(1., 1.)),
-                    ..default()
-                },
-                ..default()
-            },
-        ))
+        .spawn(PbrBundle {
+            mesh: meshes.add(
+                Mesh::try_from(shape::Icosphere {
+                    radius: 1.0,
+                    ..Default::default()
+                })
+                .unwrap(),
+            ),
+            material: materials.add(Color::rgb(0.4, 0., 0.).into()),
+            transform: Transform::from_translation(Vec3::new(-2.0, 0.0, 0.0)),
+            ..Default::default()
+        })
         .add_rollback();
-
-    // Player 2
     commands
-        .spawn((
-            Player { handle: 1 },
-            BulletReady(true),
-            MoveDir(-Vec2::X),
-            SpriteBundle {
-                transform: Transform::from_translation(Vec3::new(2., 0., 100.)),
-                sprite: Sprite {
-                    color: Color::rgb(0., 0.4, 0.),
-                    custom_size: Some(Vec2::new(1., 1.)),
-                    ..default()
-                },
-                ..default()
-            },
-        ))
+        .spawn(PbrBundle {
+            mesh: meshes.add(
+                Mesh::try_from(shape::Icosphere {
+                    radius: 1.0,
+                    ..Default::default()
+                })
+                .unwrap(),
+            ),
+            material: materials.add(Color::rgb(0.0, 0.4, 0.).into()),
+            transform: Transform::from_translation(Vec3::new(2.0, 0.0, 0.0)),
+            ..Default::default()
+        })
         .add_rollback();
 }
 
@@ -237,7 +194,6 @@ fn wait_for_players(
     mut commands: Commands,
     mut socket: ResMut<MatchboxSocket<SingleChannel>>,
     mut next_state: ResMut<NextState<GameState>>,
-    args: Res<Args>,
 ) {
     if socket.get_channel(0).is_err() {
         return; // we've already started
@@ -258,7 +214,7 @@ fn wait_for_players(
     let mut session_builder = ggrs::SessionBuilder::<Config>::new()
         .with_num_players(num_players)
         .with_desync_detection_mode(DesyncDetection::On { interval: 1 })
-        .with_input_delay(args.input_delay);
+        .with_input_delay(2);
 
     for (i, player) in players.into_iter().enumerate() {
         session_builder = session_builder
@@ -312,7 +268,7 @@ fn move_players(
 
         let direction = direction(input);
 
-        if direction == Vec2::ZERO {
+        if direction == Vec3::ZERO {
             continue;
         }
 
@@ -321,8 +277,8 @@ fn move_players(
         let move_speed = 7.;
         let move_delta = direction * move_speed * time.delta_seconds();
 
-        let old_pos = transform.translation.xy();
-        let limit = Vec2::splat(MAP_SIZE as f32 / 2. - 0.5);
+        let old_pos = transform.translation;
+        let limit = Vec3::splat(MAP_SIZE as f32 / 2. - 0.5);
         let new_pos = (old_pos + move_delta).clamp(-limit, limit);
 
         transform.translation.x = new_pos.x;
@@ -347,27 +303,27 @@ fn fire_bullets(
     inputs: Res<PlayerInputs<Config>>,
     images: Res<ImageAssets>,
     mut players: Query<(&Transform, &Player, &mut BulletReady, &MoveDir)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (transform, player, mut bullet_ready, move_dir) in &mut players {
         let (input, _) = inputs[player.handle];
         if fire(input) && bullet_ready.0 {
-            let player_pos = transform.translation.xy();
+            let player_pos = transform.translation;
             let pos = player_pos + move_dir.0 * PLAYER_RADIUS + BULLET_RADIUS;
             commands
-                .spawn((
-                    Bullet,
-                    *move_dir,
-                    SpriteBundle {
-                        transform: Transform::from_translation(pos.extend(200.))
-                            .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, move_dir.0)),
-                        texture: images.bullet.clone(),
-                        sprite: Sprite {
-                            custom_size: Some(Vec2::new(0.3, 0.1)),
-                            ..default()
-                        },
-                        ..default()
-                    },
-                ))
+                .spawn(PbrBundle {
+                    mesh: meshes.add(
+                        Mesh::try_from(shape::Icosphere {
+                            radius: 0.1,
+                            ..Default::default()
+                        })
+                        .unwrap(),
+                    ),
+                    material: materials.add(Color::RED.into()),
+                    transform: Transform::from_translation(Vec3::new(-2.0, 0.0, 0.0)),
+                    ..Default::default()
+                })
                 .add_rollback();
             bullet_ready.0 = false;
         }
@@ -378,7 +334,7 @@ fn move_bullet(mut bullets: Query<(&mut Transform, &MoveDir), With<Bullet>>, tim
     for (mut transform, dir) in &mut bullets {
         let speed = 20.;
         let delta = dir.0 * speed * time.delta_seconds();
-        transform.translation += delta.extend(0.);
+        transform.translation += delta;
     }
 }
 
@@ -394,10 +350,8 @@ fn kill_players(
 ) {
     for (player_entity, player_transform, player) in &players {
         for bullet_transform in &bullets {
-            let distance = Vec2::distance(
-                player_transform.translation.xy(),
-                bullet_transform.translation.xy(),
-            );
+            let distance =
+                Vec3::distance(player_transform.translation, bullet_transform.translation);
             if distance < PLAYER_RADIUS + BULLET_RADIUS {
                 commands.entity(player_entity).despawn_recursive();
                 next_state.set(RollbackState::RoundEnd);
