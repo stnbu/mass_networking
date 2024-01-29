@@ -58,18 +58,25 @@ fn main() {
     let mut app = App::new();
     app.add_state::<GameState>();
 
-    #[cfg(target_arch = "wasm32")]
-    app.add_plugins((
-        DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                fit_canvas_to_parent: true,
-                ..default()
-            }),
+    // becomes wasm code
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            fit_canvas_to_parent: true,
             ..default()
         }),
-        GgrsPlugin::<Config>::default(),
-    ));
-    app.add_ggrs_state::<RollbackState>()
+        ..default()
+    }));
+    // becomes aaarch64 code
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_plugins(DefaultPlugins);
+    #[cfg(not(target_arch = "wasm32"))]
+    let args = Args::parse();
+    #[cfg(not(target_arch = "wasm32"))]
+    app.insert_resource(args)
+        .add_systems(OnEnter(GameState::InGame), possition_window);
+
+    app.add_plugins(GgrsPlugin::<Config>::default())
+        .add_ggrs_state::<RollbackState>()
         .rollback_resource_with_clone::<RoundEndTimer>()
         .rollback_component_with_clone::<Transform>()
         .rollback_component_with_copy::<BulletReady>()
@@ -105,17 +112,8 @@ fn main() {
             )
                 .run_if(in_state(RollbackState::InRound))
                 .after(apply_state_transition::<RollbackState>),
-        );
-
-    #[cfg(not(target_arch = "wasm32"))]
-    app.add_plugins((DefaultPlugins, GgrsPlugin::<Config>::default()));
-    #[cfg(not(target_arch = "wasm32"))]
-    let args = Args::parse();
-    #[cfg(not(target_arch = "wasm32"))]
-    app.insert_resource(args)
-        .add_systems(OnEnter(GameState::InGame), possition_window);
-
-    app.run();
+        )
+        .run();
 }
 
 const MAP_SIZE: i32 = 41;
