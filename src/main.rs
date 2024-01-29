@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, GgrsConfig, *};
 use bevy_matchbox::prelude::*;
-use bevy_roll_safe::prelude::*;
 use std::f32::consts::TAU;
 
 use components::*;
@@ -22,12 +21,6 @@ enum GameState {
     InGame,
 }
 
-#[derive(States, Clone, Eq, PartialEq, Debug, Hash, Default)]
-enum RollbackState {
-    #[default]
-    InRound,
-}
-
 #[derive(Resource, Clone, Deref, DerefMut)]
 struct RoundEndTimer(Timer);
 
@@ -43,7 +36,6 @@ fn main() {
 
     app.arch_build()
         .add_plugins(GgrsPlugin::<Config>::default())
-        .add_ggrs_state::<RollbackState>()
         .rollback_resource_with_clone::<RoundEndTimer>()
         .rollback_component_with_clone::<Transform>()
         .rollback_component_with_copy::<BulletReady>()
@@ -68,7 +60,7 @@ fn main() {
             ),
         )
         .add_systems(ReadInputs, read_local_inputs)
-        .add_systems(OnEnter(RollbackState::InRound), spawn_players)
+        .add_systems(Startup, spawn_players)
         .add_systems(
             GgrsSchedule,
             (
@@ -76,9 +68,7 @@ fn main() {
                 reload_bullet,
                 fire_bullets.after(move_players).after(reload_bullet),
                 move_bullet.after(fire_bullets),
-            )
-                .run_if(in_state(RollbackState::InRound))
-                .after(apply_state_transition::<RollbackState>),
+            ),
         )
         .run();
 }
