@@ -11,6 +11,7 @@ mod components;
 mod input;
 
 mod arch;
+#[allow(unused_imports)]
 use arch::WasmAppExtensions;
 
 type Config = GgrsConfig<u8, PeerId>;
@@ -41,8 +42,11 @@ fn main() {
     let mut app = App::new();
     app.add_state::<GameState>();
 
-    #[cfg(feature = "wasm")]
+    #[cfg(target_arch = "wasm")]
     app.extend_wasm();
+
+    #[cfg(target_arch = "aarch64")]
+    app.extend_aarch64();
 
     app.add_plugins(GgrsPlugin::<Config>::default())
         .add_ggrs_state::<RollbackState>()
@@ -81,12 +85,8 @@ fn main() {
             )
                 .run_if(in_state(RollbackState::InRound))
                 .after(apply_state_transition::<RollbackState>),
-        );
-
-    #[cfg(feature = "aarch64")]
-    app.extend_aarch64();
-
-    app.run();
+        )
+        .run();
 }
 
 const MAP_SIZE: i32 = 41;

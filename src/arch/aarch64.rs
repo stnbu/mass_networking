@@ -34,16 +34,11 @@ pub fn position_window(
     mut windows: Query<&mut Window>,
     winit_windows: NonSend<WinitWindows>,
     mut window_created_events: EventReader<WindowCreated>,
-    mut done: Local<bool>,
 ) {
-    if window_created_events.len() == 0 || *done {
+    if window_created_events.len() == 0 {
         return;
     }
-
-    let &WindowCreated { window: monitor } = window_created_events
-        .read()
-        .next()
-        .expect("No WindowCreated events");
+    let &WindowCreated { window: monitor } = window_created_events.read().next().unwrap();
     let display_size = winit_windows
         .get_window(monitor)
         .expect("Could not get WinitWindow")
@@ -66,5 +61,4 @@ pub fn position_window(
         .resolution
         .set(window_width as f32, window_height as f32);
     window.position.set(IVec2::new(window_x as i32, 0.0 as i32));
-    *done = true;
 }
