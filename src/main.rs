@@ -1,12 +1,8 @@
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
-use bevy::winit::WinitWindows;
 use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, GgrsConfig, *};
 use bevy_matchbox::prelude::*;
 use bevy_roll_safe::prelude::*;
-
-#[cfg(not(target_arch = "wasm32"))]
-use clap::{Parser, ValueEnum};
+use std::f32::consts::TAU;
 
 use components::*;
 use input::*;
@@ -14,23 +10,10 @@ use input::*;
 mod components;
 mod input;
 
+mod arch;
+use crate::arch::WasmAppExtensions;
+
 type Config = GgrsConfig<u8, PeerId>;
-
-#[cfg(not(target_arch = "wasm32"))]
-#[derive(ValueEnum, Clone, Debug, Default)]
-pub enum Side {
-    #[default]
-    Left,
-    Right,
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-#[derive(Parser, Resource, Debug, Clone)]
-pub struct Args {
-    /// runs the game in synctest mode
-    #[arg(long, value_enum)]
-    pub side: Side,
-}
 
 #[derive(States, Clone, Eq, PartialEq, Debug, Hash, Default)]
 enum GameState {
@@ -58,22 +41,11 @@ fn main() {
     let mut app = App::new();
     app.add_state::<GameState>();
 
-    // becomes wasm code
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            fit_canvas_to_parent: true,
-            ..default()
-        }),
-        ..default()
-    }));
-    // becomes aaarch64 code
-    #[cfg(not(target_arch = "wasm32"))]
-    app.add_plugins(DefaultPlugins);
-    #[cfg(not(target_arch = "wasm32"))]
-    let args = Args::parse();
-    #[cfg(not(target_arch = "wasm32"))]
-    app.insert_resource(args)
-        .add_systems(OnEnter(GameState::InGame), possition_window);
+    #[cfg(feature = "wasm")]
+    app.extend_wasm();
+
+    #[cfg(feature = "aarch64")]
+    app.extend_aarch64();
 
     app.add_plugins(GgrsPlugin::<Config>::default())
         .add_ggrs_state::<RollbackState>()
@@ -124,8 +96,6 @@ fn setup(mut commands: Commands) {
         ..default()
     });
 }
-
-use std::{default, f32::consts::TAU};
 
 fn spawn_players(
     mut commands: Commands,
@@ -367,38 +337,3 @@ fn move_bullet(mut bullets: Query<(&mut Transform, &MoveDir), With<Bullet>>, tim
 
 const PLAYER_RADIUS: f32 = 0.5;
 const BULLET_RADIUS: f32 = 0.05;
-
-#[cfg(not(target_arch = "wasm32"))]
-fn possition_window(
-    args: Res<Args>,
-    mut windows: Query<&mut Window>,
-    winit_windows: NonSend<WinitWindows>,
-    window_query: Query<Entity, With<PrimaryWindow>>,
-) {
-    let display_size = if let Some(monitor) = window_query
-        .get_single()
-        .ok()
-        .and_then(|entity| winit_windows.get_window(entity))
-        .and_then(|winit_window| winit_window.current_monitor())
-    {
-        monitor.size()
-    } else {
-        panic!("No monitor found!");
-    };
-
-    let display_width = display_size.width;
-    let display_height = display_size.height;
-
-    let window_width = display_width / 4.0 as u32;
-    let window_height = display_height / 4.0 as u32;
-    let window_x = match args.side {
-        Side::Left => 0,
-        Side::Right => display_width - (window_width * 2),
-    };
-
-    let mut window = windows.single_mut();
-    window
-        .resolution
-        .set(window_width as f32, window_height as f32);
-    window.position.set(IVec2::new(window_x as i32, 0.0 as i32));
-}
