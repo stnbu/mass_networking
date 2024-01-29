@@ -1,18 +1,20 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
-use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, *};
+use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, GgrsConfig, *};
 use bevy_matchbox::prelude::*;
 use bevy_roll_safe::prelude::*;
 
+#[cfg(not(target_arch = "wasm32"))]
 use clap::{Parser, ValueEnum};
+
 use components::*;
 use input::*;
 
 mod components;
 mod input;
 
-type Config = bevy_ggrs::GgrsConfig<u8, PeerId>;
+type Config = GgrsConfig<u8, PeerId>;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(ValueEnum, Clone, Debug, Default)]
