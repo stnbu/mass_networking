@@ -1,6 +1,3 @@
-use crate::GameState;
-use bevy::ecs::event;
-use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::{prelude::*, window::WindowCreated};
 use clap::{Parser, ValueEnum};
@@ -25,16 +22,10 @@ pub trait WasmAppExtensions {
 impl WasmAppExtensions for App {
     fn extend_aarch64(&mut self) -> &mut Self {
         let args = Args::parse();
-        self.add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                fit_canvas_to_parent: false,
-                ..default()
-            }),
-            ..default()
-        }))
-        .insert_resource(args)
-        // FIXME: Called in every frame; system checks WindowCreated event queue length.
-        .add_systems(Update, position_window)
+        self.add_plugins(DefaultPlugins)
+            .insert_resource(args)
+            // FIXME: Called in every frame; system checks WindowCreated event queue length.
+            .add_systems(Update, position_window)
     }
 }
 
