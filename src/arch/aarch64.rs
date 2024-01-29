@@ -30,7 +30,7 @@ impl Aarch64AppExtensions for App {
     }
 }
 
-fn position_window(
+pub fn position_window(
     args: Res<Args>,
     mut windows: Query<&mut Window>,
     winit_windows: NonSend<WinitWindows>,
