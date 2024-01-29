@@ -14,6 +14,5 @@ bevy_roll_safe = "0.1"
 clap = { version = "4.4", features = ["derive"] }
 
 [features]
-default = ["wasm"]
 wasm = []
 aarch64 = []

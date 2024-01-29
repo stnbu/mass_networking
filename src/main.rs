@@ -11,7 +11,7 @@ mod components;
 mod input;
 
 mod arch;
-use crate::arch::WasmAppExtensions;
+use arch::WasmAppExtensions;
 
 type Config = GgrsConfig<u8, PeerId>;
 
@@ -43,9 +43,6 @@ fn main() {
 
     #[cfg(feature = "wasm")]
     app.extend_wasm();
-
-    #[cfg(feature = "aarch64")]
-    app.extend_aarch64();
 
     app.add_plugins(GgrsPlugin::<Config>::default())
         .add_ggrs_state::<RollbackState>()
@@ -84,8 +81,12 @@ fn main() {
             )
                 .run_if(in_state(RollbackState::InRound))
                 .after(apply_state_transition::<RollbackState>),
-        )
-        .run();
+        );
+
+    #[cfg(feature = "aarch64")]
+    app.extend_aarch64();
+
+    app.run();
 }
 
 const MAP_SIZE: i32 = 41;

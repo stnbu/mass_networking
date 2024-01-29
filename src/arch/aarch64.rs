@@ -1,7 +1,8 @@
 use crate::GameState;
-use bevy::prelude::*;
+use bevy::ecs::event;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
+use bevy::{prelude::*, window::WindowCreated};
 use clap::{Parser, ValueEnum};
 
 #[derive(ValueEnum, Clone, Debug, Default)]
@@ -17,16 +18,23 @@ pub struct Args {
     pub side: Side,
 }
 
-pub trait Aarch64AppExtensions {
+pub trait WasmAppExtensions {
     fn extend_aarch64(&mut self) -> &mut Self;
 }
 
-impl Aarch64AppExtensions for App {
+impl WasmAppExtensions for App {
     fn extend_aarch64(&mut self) -> &mut Self {
         let args = Args::parse();
-        self.add_plugins(DefaultPlugins)
-            .insert_resource(args)
-            .add_systems(OnEnter(GameState::InGame), position_window)
+        self.add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                fit_canvas_to_parent: false,
+                ..default()
+            }),
+            ..default()
+        }))
+        .insert_resource(args)
+        // FIXME: Called in every frame; system checks WindowCreated event queue length.
+        .add_systems(Update, position_window)
     }
 }
 
@@ -34,18 +42,23 @@ pub fn position_window(
     args: Res<Args>,
     mut windows: Query<&mut Window>,
     winit_windows: NonSend<WinitWindows>,
-    window_query: Query<Entity, With<PrimaryWindow>>,
+    mut window_created_events: EventReader<WindowCreated>,
+    mut done: Local<bool>,
 ) {
-    let display_size = if let Some(monitor) = window_query
-        .get_single()
-        .ok()
-        .and_then(|entity| winit_windows.get_window(entity))
-        .and_then(|winit_window| winit_window.current_monitor())
-    {
-        monitor.size()
-    } else {
-        panic!("No monitor found!");
-    };
+    if window_created_events.len() == 0 || *done {
+        return;
+    }
+
+    let &WindowCreated { window: monitor } = window_created_events
+        .read()
+        .next()
+        .expect("No WindowCreated events");
+    let display_size = winit_windows
+        .get_window(monitor)
+        .expect("Could not get WinitWindow")
+        .current_monitor()
+        .expect("Could not get current monitor")
+        .size();
 
     let display_width = display_size.width;
     let display_height = display_size.height;
@@ -62,4 +75,5 @@ pub fn position_window(
         .resolution
         .set(window_width as f32, window_height as f32);
     window.position.set(IVec2::new(window_x as i32, 0.0 as i32));
+    *done = true;
 }
