@@ -15,12 +15,12 @@ pub struct Args {
     pub side: Side,
 }
 
-pub trait WasmAppExtensions {
-    fn extend_aarch64(&mut self) -> &mut Self;
+pub trait ArchAppExt {
+    fn arch_build(&mut self) -> &mut Self;
 }
 
-impl WasmAppExtensions for App {
-    fn extend_aarch64(&mut self) -> &mut Self {
+impl ArchAppExt for App {
+    fn arch_build(&mut self) -> &mut Self {
         let args = Args::parse();
         self.add_plugins(DefaultPlugins)
             .insert_resource(args)

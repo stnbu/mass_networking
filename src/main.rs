@@ -12,7 +12,7 @@ mod input;
 
 mod arch;
 #[allow(unused_imports)]
-use arch::WasmAppExtensions;
+use arch::ArchAppExt;
 
 type Config = GgrsConfig<u8, PeerId>;
 
@@ -42,13 +42,8 @@ fn main() {
     let mut app = App::new();
     app.add_state::<GameState>();
 
-    #[cfg(target_arch = "wasm")]
-    app.extend_wasm();
-
-    #[cfg(target_arch = "aarch64")]
-    app.extend_aarch64();
-
-    app.add_plugins(GgrsPlugin::<Config>::default())
+    app.arch_build()
+        .add_plugins(GgrsPlugin::<Config>::default())
         .add_ggrs_state::<RollbackState>()
         .rollback_resource_with_clone::<RoundEndTimer>()
         .rollback_component_with_clone::<Transform>()
