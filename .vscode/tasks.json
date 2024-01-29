@@ -1,0 +1,16 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Toggle Rust Target",
+        "type": "shell",
+        "command": "python3",
+        "args": [
+          "${workspaceFolder}/.vscode/toggle_target.py"
+        ],
+        "problemMatcher": [],
+        "group": "none"
+      }
+    ]
+  }
+  
