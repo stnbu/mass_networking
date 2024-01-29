@@ -11,7 +11,6 @@ mod components;
 mod input;
 
 mod arch;
-#[allow(unused_imports)]
 use arch::ArchAppExt;
 
 type Config = GgrsConfig<u8, PeerId>;
