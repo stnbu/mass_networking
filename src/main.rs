@@ -106,7 +106,7 @@ fn spawn_players(
                 ),
                 material: materials.add(Color::GREEN.into()),
                 transform: Transform::from_translation(Vec3::new(-2.0, 0.0, 0.0))
-                    .with_rotation(Quat::from_rotation_y(TAU / -4.0)),
+                    .looking_at(Vec3::ZERO, Vec3::Y),
                 ..Default::default()
             },
         ))
@@ -140,7 +140,7 @@ fn spawn_players(
                 ),
                 material: materials.add(Color::BLUE.into()),
                 transform: Transform::from_translation(Vec3::new(2.0, 0.0, 0.0))
-                    .with_rotation(Quat::from_rotation_y(TAU / 4.0)),
+                    .looking_at(Vec3::ZERO, Vec3::Y),
                 ..Default::default()
             },
         ))
