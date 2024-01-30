@@ -7,7 +7,7 @@ pub struct Player {
 }
 
 #[derive(Component)]
-pub struct Bullet;
+pub struct Projectile;
 
 #[derive(Component, Clone, Copy)]
 pub struct MoveDir(pub Vec3);

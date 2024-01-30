@@ -51,7 +51,7 @@ fn main() {
         .add_systems(Startup, spawn_players)
         .add_systems(
             GgrsSchedule,
-            (fire_bullets, move_bullet.after(fire_bullets)),
+            (fire_projectile, move_projectile.after(fire_projectile)),
         )
         .run();
 }
@@ -66,7 +66,7 @@ fn setup(mut commands: Commands) {
 fn spawn_players(
     mut commands: Commands,
     players: Query<Entity, With<Player>>,
-    bullets: Query<Entity, With<Bullet>>,
+    projectiles: Query<Entity, With<Projectile>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -74,8 +74,8 @@ fn spawn_players(
         commands.entity(player).despawn_recursive();
     }
 
-    for bullet in &bullets {
-        commands.entity(bullet).despawn_recursive();
+    for projectile in &projectiles {
+        commands.entity(projectile).despawn_recursive();
     }
 
     commands
@@ -213,7 +213,7 @@ fn handle_ggrs_events(mut session: ResMut<Session<Config>>) {
     }
 }
 
-fn fire_bullets(
+fn fire_projectile(
     mut commands: Commands,
     inputs: Res<PlayerInputs<Config>>,
     mut players: Query<(&Transform, &Player)>,
@@ -225,10 +225,10 @@ fn fire_bullets(
         if fire(input) {
             let player_pos = transform.translation;
             let forward = -transform.local_z();
-            let pos = player_pos + forward * PLAYER_RADIUS + BULLET_RADIUS;
+            let pos = player_pos + forward * PLAYER_RADIUS + PROJECTILE_RADIUS;
             commands
                 .spawn((
-                    Bullet,
+                    Projectile,
                     MoveDir(forward),
                     PbrBundle {
                         mesh: meshes.add(
@@ -248,8 +248,11 @@ fn fire_bullets(
     }
 }
 
-fn move_bullet(mut bullets: Query<(&mut Transform, &MoveDir), With<Bullet>>, time: Res<Time>) {
-    for (mut transform, dir) in &mut bullets {
+fn move_projectile(
+    mut projectile: Query<(&mut Transform, &MoveDir), With<Projectile>>,
+    time: Res<Time>,
+) {
+    for (mut transform, dir) in &mut projectile {
         let speed = 20.;
         let delta = dir.0 * speed * time.delta_seconds();
         transform.translation += delta;
@@ -257,4 +260,4 @@ fn move_bullet(mut bullets: Query<(&mut Transform, &MoveDir), With<Bullet>>, tim
 }
 
 const PLAYER_RADIUS: f32 = 0.5;
-const BULLET_RADIUS: f32 = 0.05;
+const PROJECTILE_RADIUS: f32 = 0.05;
