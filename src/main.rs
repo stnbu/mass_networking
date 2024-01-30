@@ -21,24 +21,13 @@ enum GameState {
     InGame,
 }
 
-#[derive(Resource, Clone, Deref, DerefMut)]
-struct RoundEndTimer(Timer);
-
-impl Default for RoundEndTimer {
-    fn default() -> Self {
-        RoundEndTimer(Timer::from_seconds(1.0, TimerMode::Repeating))
-    }
-}
-
 fn main() {
     let mut app = App::new();
     app.add_state::<GameState>();
 
     app.arch_build()
         .add_plugins(GgrsPlugin::<Config>::default())
-        .rollback_resource_with_clone::<RoundEndTimer>()
         .rollback_component_with_clone::<Transform>()
-        .rollback_component_with_copy::<BulletReady>()
         .rollback_component_with_copy::<Player>()
         .rollback_component_with_copy::<MoveDir>()
         .rollback_component_with_clone::<GlobalTransform>()
@@ -47,7 +36,6 @@ fn main() {
         .rollback_component_with_clone::<ViewVisibility>()
         .checksum_component::<Transform>(checksum_transform)
         .insert_resource(ClearColor(Color::rgb(0.53, 0.53, 0.53)))
-        .init_resource::<RoundEndTimer>()
         .add_systems(
             OnEnter(GameState::Matchmaking),
             (setup, start_matchbox_socket),
@@ -63,17 +51,10 @@ fn main() {
         .add_systems(Startup, spawn_players)
         .add_systems(
             GgrsSchedule,
-            (
-                move_players,
-                reload_bullet,
-                fire_bullets.after(move_players).after(reload_bullet),
-                move_bullet.after(fire_bullets),
-            ),
+            (fire_bullets, move_bullet.after(fire_bullets)),
         )
         .run();
 }
-
-const MAP_SIZE: i32 = 41;
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
@@ -100,8 +81,6 @@ fn spawn_players(
     commands
         .spawn((
             Player { handle: 0 },
-            BulletReady(true),
-            MoveDir(-Vec3::X),
             PbrBundle {
                 mesh: meshes.add(
                     Mesh::try_from(shape::Cube {
@@ -136,8 +115,6 @@ fn spawn_players(
     commands
         .spawn((
             Player { handle: 1 },
-            BulletReady(true),
-            MoveDir(-Vec3::X),
             PbrBundle {
                 mesh: meshes.add(
                     Mesh::try_from(shape::Cube {
@@ -236,56 +213,16 @@ fn handle_ggrs_events(mut session: ResMut<Session<Config>>) {
     }
 }
 
-fn move_players(
-    mut players: Query<(&mut Transform, &mut MoveDir, &Player)>,
-    inputs: Res<PlayerInputs<Config>>,
-    time: Res<Time>,
-) {
-    for (mut transform, mut move_direction, player) in &mut players {
-        let (input, _) = inputs[player.handle];
-
-        let direction = direction(input);
-
-        if direction == Vec3::ZERO {
-            continue;
-        }
-
-        move_direction.0 = direction;
-
-        let move_speed = 7.;
-        let move_delta = direction * move_speed * time.delta_seconds();
-
-        let old_pos = transform.translation;
-        let limit = Vec3::splat(MAP_SIZE as f32 / 2. - 0.5);
-        let new_pos = (old_pos + move_delta).clamp(-limit, limit);
-
-        transform.translation.x = new_pos.x;
-        transform.translation.y = new_pos.y;
-    }
-}
-
-fn reload_bullet(
-    inputs: Res<PlayerInputs<Config>>,
-    mut players: Query<(&mut BulletReady, &Player)>,
-) {
-    for (mut can_fire, player) in players.iter_mut() {
-        let (input, _) = inputs[player.handle];
-        if !fire(input) {
-            can_fire.0 = true;
-        }
-    }
-}
-
 fn fire_bullets(
     mut commands: Commands,
     inputs: Res<PlayerInputs<Config>>,
-    mut players: Query<(&Transform, &Player, &mut BulletReady)>,
+    mut players: Query<(&Transform, &Player)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (&transform, player, mut bullet_ready) in &mut players {
+    for (&transform, player) in &mut players {
         let (input, _) = inputs[player.handle];
-        if fire(input) && bullet_ready.0 {
+        if fire(input) {
             let player_pos = transform.translation;
             let forward = -transform.local_z();
             let pos = player_pos + forward * PLAYER_RADIUS + BULLET_RADIUS;
@@ -307,7 +244,6 @@ fn fire_bullets(
                     },
                 ))
                 .add_rollback();
-            bullet_ready.0 = false;
         }
     }
 }
