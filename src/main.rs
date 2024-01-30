@@ -93,74 +93,63 @@ fn spawn_players(
         commands.entity(projectile).despawn_recursive();
     }
 
-    commands
-        .spawn((
-            Player { handle: 0 },
-            PbrBundle {
-                mesh: meshes.add(
-                    Mesh::try_from(shape::Cube {
-                        size: 1.0,
-                        ..Default::default()
-                    })
-                    .unwrap(),
-                ),
-                material: materials.add(Color::GREEN.into()),
-                transform: Transform::from_translation(Vec3::new(-2.0, 0.0, 0.0))
-                    .looking_at(Vec3::ZERO, Vec3::Y),
-                ..Default::default()
-            },
-        ))
-        .with_children(|child| {
-            child.spawn(PbrBundle {
-                mesh: meshes.add(
-                    Mesh::try_from(shape::Capsule {
-                        radius: 0.05,
-                        depth: 1.0,
-                        ..Default::default()
-                    })
-                    .unwrap(),
-                ),
-                material: materials.add(Color::WHITE.into()),
-                transform: Transform::from_rotation(Quat::from_rotation_x(TAU / 4.0))
-                    .with_translation(Vec3::Z * -1.0),
-                ..Default::default()
-            });
-        })
-        .add_rollback();
-    commands
-        .spawn((
-            Player { handle: 1 },
-            PbrBundle {
-                mesh: meshes.add(
-                    Mesh::try_from(shape::Cube {
-                        size: 1.0,
-                        ..Default::default()
-                    })
-                    .unwrap(),
-                ),
-                material: materials.add(Color::BLUE.into()),
-                transform: Transform::from_translation(Vec3::new(2.0, 0.0, 0.0))
-                    .looking_at(Vec3::ZERO, Vec3::Y),
-                ..Default::default()
-            },
-        ))
-        .with_children(|child| {
-            child.spawn(PbrBundle {
-                mesh: meshes.add(
-                    Mesh::try_from(shape::Capsule {
-                        radius: 0.05,
-                        depth: 1.0,
-                        ..Default::default()
-                    })
-                    .unwrap(),
-                ),
-                material: materials.add(Color::WHITE.into()),
-                transform: Transform::from_rotation(Quat::from_rotation_x(TAU / 4.0))
-                    .with_translation(Vec3::Z * -1.0),
-                ..Default::default()
-            });
-        })
-        .add_rollback();
+    struct Attrs {
+        handle: usize,
+        position: Vec3,
+        color: Color,
+    }
+
+    let player_attrs = [
+        Attrs {
+            handle: 0,
+            position: Vec3::new(-2., 0., 0.),
+            color: Color::GREEN,
+        },
+        Attrs {
+            handle: 1,
+            position: Vec3::new(2., 0., 0.),
+            color: Color::BLUE,
+        },
+    ];
+
+    for attr in player_attrs {
+        commands
+            .spawn((
+                Player {
+                    handle: attr.handle,
+                },
+                PbrBundle {
+                    mesh: meshes.add(
+                        Mesh::try_from(shape::Cube {
+                            size: 1.0,
+                            ..Default::default()
+                        })
+                        .unwrap(),
+                    ),
+                    material: materials.add(attr.color.into()),
+                    transform: Transform::from_translation(attr.position)
+                        .looking_at(Vec3::ZERO, Vec3::Y),
+                    ..Default::default()
+                },
+            ))
+            .with_children(|child| {
+                child.spawn(PbrBundle {
+                    mesh: meshes.add(
+                        Mesh::try_from(shape::Capsule {
+                            radius: 0.05,
+                            depth: 1.0,
+                            ..Default::default()
+                        })
+                        .unwrap(),
+                    ),
+                    material: materials.add(Color::WHITE.into()),
+                    transform: Transform::from_rotation(Quat::from_rotation_x(TAU / 4.0))
+                        .with_translation(Vec3::Z * -1.0),
+                    ..Default::default()
+                });
+            })
+            .add_rollback();
+    }
 }
 
 fn start_matchbox_socket(mut commands: Commands) {
