@@ -64,6 +64,8 @@ fn setup_camera(
     for (player, &Player { handle }) in &players {
         for &local_player in &local_players.0 {
             if local_player == handle {
+                // Despawn "barrel"
+                commands.entity(player).despawn_descendants();
                 commands.entity(player).with_children(|child| {
                     child.spawn(Camera3dBundle::default());
                 });

@@ -2,11 +2,11 @@ use crate::Config;
 use bevy::{prelude::*, utils::HashMap};
 use bevy_ggrs::{LocalInputs, LocalPlayers};
 
-const INPUT_UP: u8 = 1 << 0;
-const INPUT_DOWN: u8 = 1 << 1;
-const INPUT_LEFT: u8 = 1 << 2;
-const INPUT_RIGHT: u8 = 1 << 3;
-const INPUT_FIRE: u8 = 1 << 4;
+const ROTATE_UP: u8 = 1 << 0;
+const ROTATE_DOWN: u8 = 1 << 1;
+const ROTATE_LEFT: u8 = 1 << 2;
+const ROTATE_RIGHT: u8 = 1 << 3;
+const FIRE: u8 = 1 << 4;
 
 pub fn read_local_inputs(
     mut commands: Commands,
@@ -19,19 +19,19 @@ pub fn read_local_inputs(
         let mut input = 0u8;
 
         if keys.any_pressed([KeyCode::Up, KeyCode::W]) {
-            input |= INPUT_UP;
+            input |= ROTATE_UP;
         }
         if keys.any_pressed([KeyCode::Down, KeyCode::S]) {
-            input |= INPUT_DOWN;
+            input |= ROTATE_DOWN;
         }
         if keys.any_pressed([KeyCode::Left, KeyCode::A]) {
-            input |= INPUT_LEFT
+            input |= ROTATE_LEFT
         }
         if keys.any_pressed([KeyCode::Right, KeyCode::D]) {
-            input |= INPUT_RIGHT;
+            input |= ROTATE_RIGHT;
         }
         if keys.any_pressed([KeyCode::Space, KeyCode::Return]) {
-            input |= INPUT_FIRE;
+            input |= FIRE;
         }
 
         local_inputs.insert(*handle, input);
@@ -41,21 +41,21 @@ pub fn read_local_inputs(
 
 pub fn _direction(input: u8) -> Vec3 {
     let mut direction = Vec3::ZERO;
-    if input & INPUT_UP != 0 {
+    if input & ROTATE_UP != 0 {
         direction.y += 1.;
     }
-    if input & INPUT_DOWN != 0 {
+    if input & ROTATE_DOWN != 0 {
         direction.y -= 1.;
     }
-    if input & INPUT_RIGHT != 0 {
+    if input & ROTATE_RIGHT != 0 {
         direction.x += 1.;
     }
-    if input & INPUT_LEFT != 0 {
+    if input & ROTATE_LEFT != 0 {
         direction.x -= 1.;
     }
     direction.normalize_or_zero()
 }
 
 pub fn fire(input: u8) -> bool {
-    input & INPUT_FIRE != 0
+    input & FIRE != 0
 }
