@@ -7,6 +7,8 @@ const PITCH_UP: u8 = 1 << 0;
 const PITCH_DOWN: u8 = 1 << 1;
 const YAW_LEFT: u8 = 1 << 2;
 const YAW_RIGHT: u8 = 1 << 3;
+const ROLL_LEFT: u8 = 1 << 4;
+const ROLL_RIGHT: u8 = 1 << 5;
 const FIRE: u8 = 1 << 4;
 
 pub fn read_local_inputs(
@@ -31,6 +33,12 @@ pub fn read_local_inputs(
         if keys.any_pressed([KeyCode::Right, KeyCode::D]) {
             input |= YAW_RIGHT;
         }
+        if keys.any_pressed([KeyCode::Comma, KeyCode::Z]) {
+            input |= ROLL_LEFT
+        }
+        if keys.any_pressed([KeyCode::Period, KeyCode::X]) {
+            input |= ROLL_RIGHT;
+        }
         if keys.any_pressed([KeyCode::Space, KeyCode::Return]) {
             input |= FIRE;
         }
@@ -54,6 +62,12 @@ pub fn rotation(input: u8) -> Vec3 {
     }
     if input & YAW_LEFT != 0 {
         rotation.y += delta;
+    }
+    if input & ROLL_RIGHT != 0 {
+        rotation.x -= delta;
+    }
+    if input & ROLL_LEFT != 0 {
+        rotation.x += delta;
     }
     rotation
 }
