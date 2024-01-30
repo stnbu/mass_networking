@@ -1,6 +1,7 @@
 use crate::Config;
 use bevy::{prelude::*, utils::HashMap};
 use bevy_ggrs::{LocalInputs, LocalPlayers};
+use std::f32::consts::TAU;
 
 const ROTATE_UP: u8 = 1 << 0;
 const ROTATE_DOWN: u8 = 1 << 1;
@@ -39,21 +40,22 @@ pub fn read_local_inputs(
     commands.insert_resource(LocalInputs::<Config>(local_inputs));
 }
 
-pub fn _direction(input: u8) -> Vec3 {
-    let mut direction = Vec3::ZERO;
+pub fn rotation(input: u8) -> Vec3 {
+    let delta = TAU / 240.;
+    let mut rotation = Vec3::ZERO;
     if input & ROTATE_UP != 0 {
-        direction.y += 1.;
+        rotation.z += delta;
     }
     if input & ROTATE_DOWN != 0 {
-        direction.y -= 1.;
+        rotation.z -= delta;
     }
     if input & ROTATE_RIGHT != 0 {
-        direction.x += 1.;
+        rotation.y -= delta;
     }
     if input & ROTATE_LEFT != 0 {
-        direction.x -= 1.;
+        rotation.y += delta;
     }
-    direction.normalize_or_zero()
+    rotation
 }
 
 pub fn fire(input: u8) -> bool {

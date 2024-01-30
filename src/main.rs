@@ -49,7 +49,11 @@ fn main() {
         .add_systems(Startup, spawn_players)
         .add_systems(
             GgrsSchedule,
-            (fire_projectile, move_projectile.after(fire_projectile)),
+            (
+                rotate_players,
+                fire_projectile.after(rotate_players),
+                move_projectile.after(fire_projectile),
+            ),
         )
         .run();
 }
@@ -221,6 +225,22 @@ fn handle_ggrs_events(mut session: ResMut<Session<Config>>) {
             }
         }
         _ => {}
+    }
+}
+
+fn rotate_players(
+    mut players: Query<(&mut Transform, &Player)>,
+    inputs: Res<PlayerInputs<Config>>,
+) {
+    for (mut transform, player) in &mut players {
+        let (input, _) = inputs[player.handle];
+        let rotation = rotation(input);
+        transform.rotate(Quat::from_euler(
+            EulerRot::XYZ,
+            rotation.x,
+            rotation.y,
+            rotation.z,
+        ));
     }
 }
 
