@@ -194,8 +194,8 @@ fn spawn_players(
                 child.spawn(PbrBundle {
                     mesh: meshes.add(
                         Mesh::try_from(shape::Capsule {
-                            radius: 0.05,
-                            depth: 1.0,
+                            radius: 0.05 * PLAYER_SIZE,
+                            depth: 1.0 * PLAYER_SIZE,
                             ..Default::default()
                         })
                         .unwrap(),
