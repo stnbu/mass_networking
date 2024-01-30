@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, GgrsConfig, *};
 use bevy_matchbox::prelude::*;
+use bevy_rapier3d::prelude::{ActiveEvents, Collider, CollisionEvent, RigidBody, Sensor};
+use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 use std::f32::consts::TAU;
 
 use components::*;
@@ -11,6 +13,9 @@ mod input;
 
 mod arch;
 use arch::ArchAppExt;
+
+const PLAYER_SIZE: f32 = 1.;
+const PROJECTILE_RADIUS: f32 = 0.05;
 
 type Config = GgrsConfig<u8, PeerId>;
 
@@ -53,8 +58,14 @@ fn main() {
                 rotate_players,
                 fire_projectile.after(rotate_players),
                 move_projectile.after(fire_projectile),
+                handle_projectile_collision.after(move_projectile),
             ),
         )
+        .insert_resource(RapierConfiguration {
+            gravity: Vec3::ZERO,
+            ..Default::default()
+        })
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         .run();
 }
 
@@ -75,6 +86,12 @@ fn setup_camera(
                 });
             }
         }
+    }
+}
+
+fn handle_projectile_collision(mut events: EventReader<CollisionEvent>) {
+    for event in events.read() {
+        println!("{event:?}");
     }
 }
 
@@ -112,16 +129,42 @@ fn spawn_players(
         },
     ];
 
+    struct Marker {
+        position: Vec3,
+        color: Color,
+    }
+
+    let marker_offset = PLAYER_SIZE / 1.5;
+    let markers = &[
+        Marker {
+            position: Vec3::X * marker_offset,
+            color: Color::RED,
+        },
+        Marker {
+            position: Vec3::Y * marker_offset,
+            color: Color::GREEN,
+        },
+        Marker {
+            position: Vec3::Z * marker_offset,
+            color: Color::BLUE,
+        },
+    ];
+
     for attr in player_attrs {
+        let collider_size = PLAYER_SIZE / 2.;
         commands
             .spawn((
+                RigidBody::Dynamic,
+                ActiveEvents::COLLISION_EVENTS,
+                Sensor::default(),
+                Collider::cuboid(collider_size, collider_size, collider_size),
                 Player {
                     handle: attr.handle,
                 },
                 PbrBundle {
                     mesh: meshes.add(
                         Mesh::try_from(shape::Cube {
-                            size: 1.0,
+                            size: PLAYER_SIZE,
                             ..Default::default()
                         })
                         .unwrap(),
@@ -133,6 +176,22 @@ fn spawn_players(
                 },
             ))
             .with_children(|child| {
+                // position markers
+                for marker in markers {
+                    child.spawn(PbrBundle {
+                        mesh: meshes.add(
+                            Mesh::try_from(shape::Icosphere {
+                                radius: PLAYER_SIZE / 6.,
+                                ..Default::default()
+                            })
+                            .unwrap(),
+                        ),
+                        material: materials.add(marker.color.into()),
+                        transform: Transform::from_translation(marker.position),
+                        ..Default::default()
+                    });
+                }
+                // barrel
                 child.spawn(PbrBundle {
                     mesh: meshes.add(
                         Mesh::try_from(shape::Capsule {
@@ -243,23 +302,25 @@ fn fire_projectile(
     for (&transform, player) in &mut players {
         let (input, _) = inputs[player.handle];
         if fire(input) {
-            let player_pos = transform.translation;
             let forward = -transform.local_z();
-            let pos = player_pos + forward * PLAYER_RADIUS + PROJECTILE_RADIUS;
             commands
                 .spawn((
+                    RigidBody::Dynamic,
+                    Collider::ball(PROJECTILE_RADIUS),
+                    ActiveEvents::COLLISION_EVENTS,
+                    Sensor,
                     Projectile,
                     MoveDir(forward),
                     PbrBundle {
                         mesh: meshes.add(
                             Mesh::try_from(shape::Icosphere {
-                                radius: 0.04,
+                                radius: PROJECTILE_RADIUS,
                                 ..Default::default()
                             })
                             .unwrap(),
                         ),
                         material: materials.add(Color::RED.into()),
-                        transform: Transform::from_translation(pos),
+                        transform,
                         ..Default::default()
                     },
                 ))
@@ -278,6 +339,3 @@ fn move_projectile(
         transform.translation += delta;
     }
 }
-
-const PLAYER_RADIUS: f32 = 0.5;
-const PROJECTILE_RADIUS: f32 = 0.05;
