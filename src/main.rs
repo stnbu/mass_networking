@@ -1,8 +1,8 @@
+use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, GgrsConfig, *};
 use bevy_matchbox::prelude::*;
-use bevy_rapier3d::prelude::{ActiveEvents, Collider, CollisionEvent, RigidBody, Sensor};
-use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
+use bevy_rapier3d::prelude::*;
 use std::f32::consts::TAU;
 
 use components::*;
@@ -27,10 +27,9 @@ enum GameState {
 }
 
 fn main() {
-    let mut app = App::new();
-    app.add_state::<GameState>();
-
-    app.arch_build()
+    App::new()
+        .arch_build()
+        .add_state::<GameState>()
         .add_plugins(GgrsPlugin::<Config>::default())
         .rollback_component_with_clone::<Transform>()
         .rollback_component_with_copy::<Player>()
@@ -42,7 +41,7 @@ fn main() {
         .checksum_component::<Transform>(checksum_transform)
         .insert_resource(ClearColor(Color::rgb(0.53, 0.53, 0.53)))
         .add_systems(OnEnter(GameState::Matchmaking), start_matchbox_socket)
-        .add_systems(OnEnter(GameState::InGame), setup_camera)
+        .add_systems(OnEnter(GameState::InGame), setup_local_players)
         .add_systems(
             Update,
             (
@@ -69,7 +68,7 @@ fn main() {
         .run();
 }
 
-fn setup_camera(
+fn setup_local_players(
     mut commands: Commands,
     cameras: Query<Entity, With<Camera>>,
     local_players: Res<LocalPlayers>,
@@ -256,21 +255,16 @@ fn wait_for_players(
 }
 
 fn handle_ggrs_events(mut session: ResMut<Session<Config>>, mut exit: EventWriter<AppExit>) {
-    use bevy::app::AppExit;
     match session.as_mut() {
         Session::P2P(s) => {
             for event in s.events() {
+                debug!("GgrsEvent: {event:?}");
                 match event {
                     GgrsEvent::Disconnected { .. } | GgrsEvent::NetworkInterrupted { .. } => {
                         error!("Disconnected (quitting): {event:?}");
                         exit.send(AppExit);
                     }
-                    GgrsEvent::DesyncDetected { .. } => {
-                        error!("Desynced: {event:?}");
-                    }
-                    _ => {
-                        error!("Some event: {event:?}");
-                    }
+                    _ => {}
                 }
             }
         }

@@ -10,7 +10,9 @@ opt-level = 2
 bevy = "0.12"
 bevy_ggrs = { version = "0.14", features = ["wasm-bindgen"] }
 bevy_matchbox = { version = "0.8", features = ["ggrs"] }
-clap = { version = "4.4", features = ["derive"] }
-bevy_rapier3d = { version = "0.23.0", default-features = false, features = [
+bevy_rapier3d = { version = "0.23", default-features = false, features = [
     "dim3",
 ] }
+
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+clap = { version = "4.4", features = ["derive"] }

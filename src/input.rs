@@ -9,7 +9,7 @@ const YAW_LEFT: u8 = 1 << 2;
 const YAW_RIGHT: u8 = 1 << 3;
 const ROLL_LEFT: u8 = 1 << 4;
 const ROLL_RIGHT: u8 = 1 << 5;
-const FIRE: u8 = 1 << 4;
+const FIRE: u8 = 1 << 6;
 
 pub fn read_local_inputs(
     mut commands: Commands,
