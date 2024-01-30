@@ -255,19 +255,21 @@ fn wait_for_players(
     next_state.set(GameState::InGame);
 }
 
-fn handle_ggrs_events(mut session: ResMut<Session<Config>>) {
+fn handle_ggrs_events(mut session: ResMut<Session<Config>>, mut exit: EventWriter<AppExit>) {
+    use bevy::app::AppExit;
     match session.as_mut() {
         Session::P2P(s) => {
             for event in s.events() {
                 match event {
                     GgrsEvent::Disconnected { .. } | GgrsEvent::NetworkInterrupted { .. } => {
-                        error!("disconnected");
+                        error!("Disconnected (quitting): {event:?}");
+                        exit.send(AppExit);
                     }
                     GgrsEvent::DesyncDetected { .. } => {
-                        error!("desynced");
+                        error!("Desynced: {event:?}");
                     }
                     _ => {
-                        error!("unexpected event: {event:?}");
+                        error!("Some event: {event:?}");
                     }
                 }
             }
