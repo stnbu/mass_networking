@@ -1,6 +1,10 @@
+use crate::GameState;
+use bevy::log::LogPlugin;
 use bevy::winit::WinitWindows;
 use bevy::{prelude::*, window::WindowCreated};
+use bevy_ggrs::LocalPlayers;
 use clap::{Parser, ValueEnum};
+use tracing_appender::rolling;
 
 #[derive(ValueEnum, Clone, Debug, Default)]
 pub enum Side {
@@ -22,8 +26,10 @@ pub trait ArchAppExt {
 impl ArchAppExt for App {
     fn arch_build(&mut self) -> &mut Self {
         let args = Args::parse();
-        self.add_plugins(DefaultPlugins)
+
+        self.add_plugins(DefaultPlugins.build().disable::<LogPlugin>())
             .insert_resource(args)
+            .add_systems(OnEnter(GameState::InGame), setup_file_logging)
             // FIXME: Called in every frame; system checks WindowCreated event queue length.
             .add_systems(Update, position_window)
     }
@@ -61,4 +67,16 @@ pub fn position_window(
         .resolution
         .set(window_width as f32, window_height as f32);
     window.position.set(IVec2::new(window_x as i32, 0.0 as i32));
+}
+
+fn setup_file_logging(local_players: Res<LocalPlayers>) {
+    assert!(local_players.0.len() == 1);
+    for &local_player in &local_players.0 {
+        let file_appender = rolling::never(".", format!("handle_{}.log", local_player));
+        let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+        tracing_subscriber::fmt()
+            .with_writer(non_blocking)
+            .with_max_level(tracing::Level::DEBUG)
+            .init();
+    }
 }
