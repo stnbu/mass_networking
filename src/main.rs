@@ -37,7 +37,7 @@ fn main() {
         .checksum_component::<Transform>(checksum_transform)
         .insert_resource(ClearColor(Color::rgb(0.53, 0.53, 0.53)))
         .add_systems(OnEnter(GameState::Matchmaking), start_matchbox_socket)
-        .add_systems(OnEnter(GameState::InGame), (setup_camera))
+        .add_systems(OnEnter(GameState::InGame), setup_camera)
         .add_systems(
             Update,
             (
