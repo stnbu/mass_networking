@@ -36,15 +36,13 @@ fn main() {
         .rollback_component_with_clone::<ViewVisibility>()
         .checksum_component::<Transform>(checksum_transform)
         .insert_resource(ClearColor(Color::rgb(0.53, 0.53, 0.53)))
-        .add_systems(
-            OnEnter(GameState::Matchmaking),
-            (setup, start_matchbox_socket),
-        )
+        .add_systems(OnEnter(GameState::Matchmaking), start_matchbox_socket)
+        .add_systems(OnEnter(GameState::InGame), (setup_camera))
         .add_systems(
             Update,
             (
                 wait_for_players.run_if(in_state(GameState::Matchmaking)),
-                (handle_ggrs_events).run_if(in_state(GameState::InGame)),
+                handle_ggrs_events.run_if(in_state(GameState::InGame)),
             ),
         )
         .add_systems(ReadInputs, read_local_inputs)
@@ -56,11 +54,22 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-0.5, -0.5, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+fn setup_camera(
+    mut commands: Commands,
+    cameras: Query<Entity, With<Camera>>,
+    local_players: Res<LocalPlayers>,
+    players: Query<(Entity, &Player)>,
+) {
+    cameras.for_each(|camera| commands.entity(camera).despawn_recursive());
+    for (player, &Player { handle }) in &players {
+        for &local_player in &local_players.0 {
+            if local_player == handle {
+                commands.entity(player).with_children(|child| {
+                    child.spawn(Camera3dBundle::default());
+                });
+            }
+        }
+    }
 }
 
 fn spawn_players(
