@@ -33,12 +33,20 @@ fn main() {
         .add_plugins(GgrsPlugin::<Config>::default())
         .rollback_component_with_clone::<Transform>()
         .rollback_component_with_copy::<Player>()
+        //
+        //
+        // self.add_plugins(ComponentSnapshotPlugin::<CopyStrategy<Type>>::default())
         .rollback_component_with_copy::<MoveDir>()
+        //
         .rollback_component_with_clone::<GlobalTransform>()
         .rollback_component_with_clone::<Visibility>()
         .rollback_component_with_clone::<InheritedVisibility>()
         .rollback_component_with_clone::<ViewVisibility>()
+        //
+        //
+        // self.add_plugins(ComponentChecksumPlugin::<Type>(hasher))
         .checksum_component::<Transform>(checksum_transform)
+        //
         .insert_resource(ClearColor(Color::rgb(0.53, 0.53, 0.53)))
         .insert_resource(LogDesync::new(10.))
         .add_systems(OnEnter(GameState::Matchmaking), start_matchbox_socket)
