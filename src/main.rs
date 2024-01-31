@@ -40,6 +40,7 @@ fn main() {
         .rollback_component_with_clone::<ViewVisibility>()
         .checksum_component::<Transform>(checksum_transform)
         .insert_resource(ClearColor(Color::rgb(0.53, 0.53, 0.53)))
+        .insert_resource(LogDesync::new(10.))
         .add_systems(OnEnter(GameState::Matchmaking), start_matchbox_socket)
         .add_systems(OnEnter(GameState::InGame), setup_local_players)
         .add_systems(
@@ -254,17 +255,58 @@ fn wait_for_players(
     next_state.set(GameState::InGame);
 }
 
-fn handle_ggrs_events(mut session: ResMut<Session<Config>>, mut exit: EventWriter<AppExit>) {
+#[derive(Resource, Clone)]
+struct LogDesync {
+    timer: Timer,
+    total: usize,
+    since_reset: usize,
+}
+
+impl LogDesync {
+    fn new(interval: f32) -> Self {
+        Self {
+            timer: Timer::from_seconds(interval, TimerMode::Repeating),
+            total: 0,
+            since_reset: 0,
+        }
+    }
+    fn increment(&mut self) {
+        self.total += 1;
+        self.since_reset += 1;
+    }
+}
+
+fn handle_ggrs_events(
+    mut session: ResMut<Session<Config>>,
+    mut exit: EventWriter<AppExit>,
+    mut log_desync: ResMut<LogDesync>,
+    time: Res<Time>,
+) {
+    if (log_desync.timer.just_finished() || log_desync.timer.elapsed().is_zero())
+        && log_desync.since_reset > 0
+    {
+        debug!(
+            "GgrsEvent: {} total DesyncDetected events, {} in the last 10s",
+            log_desync.total, log_desync.since_reset
+        );
+        log_desync.since_reset = 0;
+    }
+    log_desync.timer.tick(time.delta());
+
     match session.as_mut() {
         Session::P2P(s) => {
             for event in s.events() {
-                debug!("GgrsEvent: {event:?}");
                 match event {
                     GgrsEvent::Disconnected { .. } | GgrsEvent::NetworkInterrupted { .. } => {
                         error!("Disconnected (quitting): {event:?}");
                         exit.send(AppExit);
                     }
-                    _ => {}
+                    GgrsEvent::DesyncDetected { .. } => {
+                        log_desync.increment();
+                    }
+                    _ => {
+                        debug!("GgrsEvent::{event:?}");
+                    }
                 }
             }
         }
