@@ -39,7 +39,7 @@ pub fn read_local_inputs(
         if keys.any_pressed([KeyCode::Period, KeyCode::X]) {
             input |= ROLL_RIGHT;
         }
-        if keys.any_pressed([KeyCode::Space, KeyCode::Return]) {
+        if keys.any_just_pressed([KeyCode::Space, KeyCode::Return]) {
             input |= FIRE;
         }
 
