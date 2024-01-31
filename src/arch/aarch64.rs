@@ -33,14 +33,14 @@ impl ArchAppExt for App {
     //#[cfg(debug_assertions)]
     fn arch_build(&mut self) -> &mut Self {
         let args = Args::parse();
-        if !cfg(debug_assertions) {
+        if cfg!(debug_assertions) {
             use bevy::log::LogPlugin;
             use bevy_dev_console::prelude::*;
             self.add_plugins((
                 ConsoleLogPlugin::default(),
                 DefaultPlugins.build().disable::<LogPlugin>(),
                 DevConsolePlugin,
-            ))
+            ));
         } else {
             self.add_plugins(DefaultPlugins);
         }

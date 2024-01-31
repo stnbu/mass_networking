@@ -97,9 +97,22 @@ fn setup_local_players(
     }
 }
 
-fn handle_projectile_collision(mut events: EventReader<CollisionEvent>) {
+fn handle_projectile_collision(mut events: EventReader<CollisionEvent>, named: Query<&Name>) {
     for event in events.read() {
-        println!("{event:?}");
+        let (a, b, flags, kind) = match event {
+            // two arbitrary names for the elements!! -- foo and bar
+            &CollisionEvent::Started(a, b, flags) => (a, b, flags, "started"),
+            &CollisionEvent::Stopped(a, b, flags) => (a, b, flags, "stopped"),
+        };
+        let get_name = |entity| match named.get(entity) {
+            Ok(name) => format!("{name} [{entity:?}]"),
+            Err(err) => format!("{err}"),
+        };
+        println!(
+            "Collision {kind}! -- `{}` vs `{}` ({flags:?})",
+            get_name(a),
+            get_name(b)
+        );
     }
 }
 
@@ -162,6 +175,7 @@ fn spawn_players(
         let collider_size = PLAYER_SIZE / 2.;
         commands
             .spawn((
+                Name::new(format!("Player {}", attr.handle)),
                 RigidBody::Dynamic,
                 ActiveEvents::COLLISION_EVENTS,
                 Sensor::default(),
@@ -200,18 +214,20 @@ fn spawn_players(
                     });
                 }
                 // barrel
+                let barrel_length = PLAYER_SIZE;
+                let barrel_radius = 0.05 * PLAYER_SIZE;
                 child.spawn(PbrBundle {
                     mesh: meshes.add(
                         Mesh::try_from(shape::Capsule {
-                            radius: 0.05 * PLAYER_SIZE,
-                            depth: 1.0 * PLAYER_SIZE,
+                            radius: barrel_radius,
+                            depth: barrel_length,
                             ..Default::default()
                         })
                         .unwrap(),
                     ),
                     material: materials.add(Color::WHITE.into()),
                     transform: Transform::from_rotation(Quat::from_rotation_x(TAU / 4.0))
-                        .with_translation(Vec3::Z * -1.0),
+                        .with_translation(-Vec3::Z * barrel_length * 1.01),
                     ..Default::default()
                 });
             })
@@ -349,8 +365,10 @@ fn fire_projectile(
         let (input, _) = inputs[player.handle];
         if fire(input) {
             let forward = -transform.local_z();
+            let spawn_location = transform.translation + forward * PLAYER_SIZE * 1.65;
             commands
                 .spawn((
+                    Name::new(format!("Projectile from {}", player.handle)),
                     RigidBody::Dynamic,
                     Collider::ball(PROJECTILE_RADIUS),
                     ActiveEvents::COLLISION_EVENTS,
@@ -366,7 +384,7 @@ fn fire_projectile(
                             .unwrap(),
                         ),
                         material: materials.add(Color::RED.into()),
-                        transform,
+                        transform: Transform::from_translation(spawn_location),
                         ..Default::default()
                     },
                 ))
@@ -380,7 +398,7 @@ fn move_projectile(
     time: Res<Time>,
 ) {
     for (mut transform, dir) in &mut projectile {
-        let speed = 20.;
+        let speed = 5.;
         let delta = dir.0 * speed * time.delta_seconds();
         transform.translation += delta;
     }
