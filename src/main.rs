@@ -29,6 +29,10 @@ enum GameState {
 fn main() {
     App::new()
         .arch_build()
+        .insert_resource(AmbientLight {
+            brightness: 1.0,
+            ..default()
+        })
         .add_state::<GameState>()
         .add_plugins(GgrsPlugin::<Config>::default())
         .rollback_component_with_clone::<Transform>()
@@ -76,12 +80,9 @@ fn setup_local_players(
     players: Query<(Entity, &Player)>,
 ) {
     cameras.for_each(|camera| commands.entity(camera).despawn_recursive());
-    /*
-    let transform = Transform::from_translation(Vec3::new(0., PLAYER_SIZE * 2., PLAYER_SIZE * 3.))
-        .looking_at(-Vec3::Z * PLAYER_SIZE * 5., Vec3::Y);
-        */
-    let transform = Transform::default();
     for (player, &Player { handle }) in &players {
+        let transform = Transform::from_translation(Vec3::new(0., 3.4, 6.5))
+            .with_rotation(Quat::from_rotation_x(TAU * -0.04));
         for &local_player in &local_players.0 {
             if local_player == handle {
                 commands.entity(player).with_children(|child| {
@@ -153,7 +154,7 @@ fn spawn_players(
         color: Color,
     }
 
-    let marker_offset = PLAYER_SIZE / 1.5;
+    let marker_offset = PLAYER_SIZE / 1.8;
     let markers = &[
         Marker {
             position: Vec3::X * marker_offset,
@@ -204,7 +205,7 @@ fn spawn_players(
                         .spawn(PbrBundle {
                             mesh: meshes.add(
                                 Mesh::try_from(shape::Icosphere {
-                                    radius: PLAYER_SIZE / 6.,
+                                    radius: PLAYER_SIZE / 6.8,
                                     ..Default::default()
                                 })
                                 .unwrap(),
