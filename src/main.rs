@@ -55,7 +55,7 @@ fn main() {
             ),
         )
         .add_systems(ReadInputs, read_local_inputs)
-        .add_systems(Startup, spawn_players)
+        .add_systems(Startup, (spawn_players, spawn_reference_markers))
         .add_systems(
             GgrsSchedule,
             (
@@ -115,6 +115,51 @@ fn handle_projectile_collision(mut events: EventReader<CollisionEvent>, named: Q
     }
 }
 
+fn spawn_reference_markers(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // origin
+    commands.spawn(PbrBundle {
+        mesh: meshes.add(
+            Mesh::try_from(shape::Icosphere {
+                radius: 0.03,
+                ..Default::default()
+            })
+            .unwrap(),
+        ),
+        material: materials.add(Color::WHITE.into()),
+        ..Default::default()
+    });
+    for value in 1..=15 {
+        let value = value as f32;
+        for sign in [-1., 1.] {
+            for direction in [Vec3::X, Vec3::Y, Vec3::Z] {
+                let transform = Transform::from_translation(direction * sign * value);
+                // red, green blue for positive X, Y, Z; the complementary colors for negative
+                let l = if sign > 0. { 0. } else { 1. };
+                let r = l - direction.x;
+                let g = l - direction.y;
+                let b = l - direction.z;
+                let color = Color::rgb(r, g, b);
+                commands.spawn(PbrBundle {
+                    mesh: meshes.add(
+                        Mesh::try_from(shape::Icosphere {
+                            radius: 0.025,
+                            ..Default::default()
+                        })
+                        .unwrap(),
+                    ),
+                    material: materials.add(color.into()),
+                    transform,
+                    ..Default::default()
+                });
+            }
+        }
+    }
+}
+
 fn spawn_players(
     mut commands: Commands,
     players: Query<Entity, With<Player>>,
@@ -140,12 +185,12 @@ fn spawn_players(
         Attrs {
             handle: 0,
             position: Vec3::new(-2., 0., 0.),
-            color: Color::GREEN,
+            color: Color::GOLD,
         },
         Attrs {
             handle: 1,
             position: Vec3::new(2., 0., 0.),
-            color: Color::BLUE,
+            color: Color::SILVER,
         },
     ];
 
