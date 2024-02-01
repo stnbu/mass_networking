@@ -7,3 +7,8 @@ pub use wasm::*;
 mod aarch64;
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::*;
+
+#[derive(Default)]
+pub struct SizedWindowPlugin {
+    pub resolution: Option<(f32, f32)>,
+}

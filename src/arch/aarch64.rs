@@ -1,3 +1,4 @@
+use bevy::window::WindowResolution;
 use bevy::winit::WinitWindows;
 use bevy::{prelude::*, window::WindowCreated};
 use clap::{Parser, ValueEnum};
@@ -15,50 +16,45 @@ pub struct Args {
     pub side: Side,
 }
 
-pub trait ArchAppExt {
-    fn arch_build(&mut self) -> &mut Self;
-}
-
-impl ArchAppExt for App {
-    fn arch_build(&mut self) -> &mut Self {
-        let args = Args::parse();
-        self.add_plugins(DefaultPlugins)
-            .insert_resource(args)
-            // FIXME: Called in every frame; system checks WindowCreated event queue length.
-            .add_systems(Update, position_window)
+impl Plugin for crate::SizedWindowPlugin {
+    fn build(&self, app: &mut App) {
+        let (width, height) = get_primary_monitor_size().expect("Cannot get monitor size");
+        app.add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                resolution: WindowResolution::new(width as f32 / 2., height as f32 / 2.),
+                position: WindowPosition::new(IVec2::new(0, 0)),
+                ..default()
+            }),
+            ..default()
+        }));
     }
 }
 
-pub fn position_window(
-    args: Res<Args>,
-    mut windows: Query<&mut Window>,
-    winit_windows: NonSend<WinitWindows>,
-    mut window_created_events: EventReader<WindowCreated>,
-) {
-    if window_created_events.len() == 0 {
-        return;
-    }
-    let &WindowCreated { window: monitor } = window_created_events.read().next().unwrap();
-    let display_size = winit_windows
-        .get_window(monitor)
-        .expect("Could not get WinitWindow")
-        .current_monitor()
-        .expect("Could not get current monitor")
-        .size();
-
-    let display_width = display_size.width;
-    let display_height = display_size.height;
-
-    let window_width = display_width / 4.0 as u32;
-    let window_height = display_height / 4.0 as u32;
-    let window_x = match args.side {
-        Side::Left => 0,
-        Side::Right => display_width - (window_width * 2),
+/*
+pub fn get_window() -> Window {
+    let (resolution, position) = match get_primary_monitor_size() {
+        Ok((width, height)) => (
+            WindowResolution::new(width as f32 / 2., height as f32 / 2.),
+            WindowPosition::new(IVec2::new(0, 0)),
+        ),
+        Err(_) => {
+            error!("Could not get monitor resolution");
+            (WindowResolution::default(), WindowPosition::default())
+        }
     };
+    let fit_canvas_to_parent = false;
+    Window {
+        resolution,
+        position,
+        fit_canvas_to_parent,
+        ..default()
+    }
+}
+*/
 
-    let mut window = windows.single_mut();
-    window
-        .resolution
-        .set(window_width as f32, window_height as f32);
-    window.position.set(IVec2::new(window_x as i32, 0.0 as i32));
+pub fn get_primary_monitor_size() -> Option<(f32, f32)> {
+    use winit::event_loop::EventLoop;
+    let primary_monitor = EventLoop::new().ok()?.primary_monitor()?;
+    let size = primary_monitor.size();
+    Some((size.width as f32, size.height as f32))
 }

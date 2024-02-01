@@ -1,4 +1,3 @@
-use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_ggrs::{ggrs::DesyncDetection, prelude::*, GgrsConfig, *};
 use bevy_matchbox::prelude::*;
@@ -12,7 +11,7 @@ mod components;
 mod input;
 
 mod arch;
-use arch::ArchAppExt;
+use arch::*;
 
 const PLAYER_SIZE: f32 = 1.;
 const PROJECTILE_RADIUS: f32 = 0.05;
@@ -27,13 +26,14 @@ enum GameState {
 }
 
 fn main() {
+    let resolution = get_primary_monitor_size();
     App::new()
-        .arch_build()
+        .add_plugins(SizedWindowPlugin { resolution })
         .insert_resource(AmbientLight {
             brightness: 1.0,
             ..default()
         })
-        .add_state::<GameState>()
+        // --
         .add_plugins(GgrsPlugin::<Config>::default())
         .rollback_component_with_clone::<Transform>()
         .rollback_component_with_copy::<Player>()
@@ -44,7 +44,6 @@ fn main() {
         .rollback_component_with_clone::<ViewVisibility>()
         .checksum_component::<Transform>(checksum_transform)
         .insert_resource(ClearColor(Color::MIDNIGHT_BLUE * 0.1))
-        .insert_resource(LogDesync::new(10.))
         .add_systems(OnEnter(GameState::Matchmaking), start_matchbox_socket)
         .add_systems(OnEnter(GameState::InGame), setup_local_players)
         .add_systems(
@@ -55,7 +54,9 @@ fn main() {
             ),
         )
         .add_systems(ReadInputs, read_local_inputs)
-        .add_systems(Startup, (spawn_players, spawn_reference_markers))
+        .add_systems(Startup, spawn_players)
+        // --
+        .add_state::<GameState>()
         .add_systems(
             GgrsSchedule,
             (
@@ -66,6 +67,7 @@ fn main() {
                 kill_aged_entities.after(handle_projectile_collision),
             ),
         )
+        .add_systems(Startup, spawn_reference_markers)
         .insert_resource(RapierConfiguration {
             gravity: Vec3::ZERO,
             ..Default::default()
@@ -382,54 +384,13 @@ fn kill_aged_entities(
     }
 }
 
-#[derive(Resource, Clone)]
-struct LogDesync {
-    timer: Timer,
-    total: usize,
-    since_reset: usize,
-}
-
-impl LogDesync {
-    fn new(interval: f32) -> Self {
-        Self {
-            timer: Timer::from_seconds(interval, TimerMode::Repeating),
-            total: 0,
-            since_reset: 0,
-        }
-    }
-    fn increment(&mut self) {
-        self.total += 1;
-        self.since_reset += 1;
-    }
-}
-
-fn handle_ggrs_events(
-    mut session: ResMut<Session<Config>>,
-    mut exit: EventWriter<AppExit>,
-    mut log_desync: ResMut<LogDesync>,
-    time: Res<Time>,
-) {
-    if (log_desync.timer.just_finished() || log_desync.timer.elapsed().is_zero())
-        && log_desync.since_reset > 0
-    {
-        debug!(
-            "GgrsEvent: {} total DesyncDetected events, {} in the last 10s",
-            log_desync.total, log_desync.since_reset
-        );
-        log_desync.since_reset = 0;
-    }
-    log_desync.timer.tick(time.delta());
-
+fn handle_ggrs_events(mut session: ResMut<Session<Config>>) {
     match session.as_mut() {
         Session::P2P(s) => {
             for event in s.events() {
                 match event {
                     GgrsEvent::Disconnected { .. } | GgrsEvent::NetworkInterrupted { .. } => {
                         error!("Disconnected (quitting): {event:?}");
-                        exit.send(AppExit);
-                    }
-                    GgrsEvent::DesyncDetected { .. } => {
-                        log_desync.increment();
                     }
                     _ => {
                         debug!("GgrsEvent::{event:?}");
