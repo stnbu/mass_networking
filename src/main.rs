@@ -33,20 +33,12 @@ fn main() {
         .add_plugins(GgrsPlugin::<Config>::default())
         .rollback_component_with_clone::<Transform>()
         .rollback_component_with_copy::<Player>()
-        //
-        //
-        // self.add_plugins(ComponentSnapshotPlugin::<CopyStrategy<Type>>::default())
         .rollback_component_with_copy::<MoveDir>()
-        //
         .rollback_component_with_clone::<GlobalTransform>()
         .rollback_component_with_clone::<Visibility>()
         .rollback_component_with_clone::<InheritedVisibility>()
         .rollback_component_with_clone::<ViewVisibility>()
-        //
-        //
-        // self.add_plugins(ComponentChecksumPlugin::<Type>(hasher))
         .checksum_component::<Transform>(checksum_transform)
-        //
         .insert_resource(ClearColor(Color::rgb(0.53, 0.53, 0.53)))
         .insert_resource(LogDesync::new(10.))
         .add_systems(OnEnter(GameState::Matchmaking), start_matchbox_socket)
@@ -84,13 +76,19 @@ fn setup_local_players(
     players: Query<(Entity, &Player)>,
 ) {
     cameras.for_each(|camera| commands.entity(camera).despawn_recursive());
+    /*
+    let transform = Transform::from_translation(Vec3::new(0., PLAYER_SIZE * 2., PLAYER_SIZE * 3.))
+        .looking_at(-Vec3::Z * PLAYER_SIZE * 5., Vec3::Y);
+        */
+    let transform = Transform::default();
     for (player, &Player { handle }) in &players {
         for &local_player in &local_players.0 {
             if local_player == handle {
-                // Despawn "barrel"
-                commands.entity(player).despawn_descendants();
                 commands.entity(player).with_children(|child| {
-                    child.spawn(Camera3dBundle::default());
+                    child.spawn(Camera3dBundle {
+                        transform,
+                        ..default()
+                    });
                 });
             }
         }
@@ -197,39 +195,45 @@ fn spawn_players(
                     ..Default::default()
                 },
             ))
+            // FIXME: pretty sure this was in play: https://github.com/gschup/bevy_ggrs/issues/63
+            // so `.add_rollback()` to children manually.
             .with_children(|child| {
                 // position markers
                 for marker in markers {
-                    child.spawn(PbrBundle {
-                        mesh: meshes.add(
-                            Mesh::try_from(shape::Icosphere {
-                                radius: PLAYER_SIZE / 6.,
-                                ..Default::default()
-                            })
-                            .unwrap(),
-                        ),
-                        material: materials.add(marker.color.into()),
-                        transform: Transform::from_translation(marker.position),
-                        ..Default::default()
-                    });
+                    child
+                        .spawn(PbrBundle {
+                            mesh: meshes.add(
+                                Mesh::try_from(shape::Icosphere {
+                                    radius: PLAYER_SIZE / 6.,
+                                    ..Default::default()
+                                })
+                                .unwrap(),
+                            ),
+                            material: materials.add(marker.color.into()),
+                            transform: Transform::from_translation(marker.position),
+                            ..Default::default()
+                        })
+                        .add_rollback();
                 }
                 // barrel
                 let barrel_length = PLAYER_SIZE;
                 let barrel_radius = 0.05 * PLAYER_SIZE;
-                child.spawn(PbrBundle {
-                    mesh: meshes.add(
-                        Mesh::try_from(shape::Capsule {
-                            radius: barrel_radius,
-                            depth: barrel_length,
-                            ..Default::default()
-                        })
-                        .unwrap(),
-                    ),
-                    material: materials.add(Color::WHITE.into()),
-                    transform: Transform::from_rotation(Quat::from_rotation_x(TAU / 4.0))
-                        .with_translation(-Vec3::Z * barrel_length * 1.01),
-                    ..Default::default()
-                });
+                child
+                    .spawn(PbrBundle {
+                        mesh: meshes.add(
+                            Mesh::try_from(shape::Capsule {
+                                radius: barrel_radius,
+                                depth: barrel_length,
+                                ..Default::default()
+                            })
+                            .unwrap(),
+                        ),
+                        material: materials.add(Color::WHITE.into()),
+                        transform: Transform::from_rotation(Quat::from_rotation_x(TAU / 4.0))
+                            .with_translation(-Vec3::Z * barrel_length * 1.01),
+                        ..Default::default()
+                    })
+                    .add_rollback();
             })
             .add_rollback();
     }
