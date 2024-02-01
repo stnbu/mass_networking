@@ -43,7 +43,7 @@ fn main() {
         .rollback_component_with_clone::<InheritedVisibility>()
         .rollback_component_with_clone::<ViewVisibility>()
         .checksum_component::<Transform>(checksum_transform)
-        .insert_resource(ClearColor(Color::rgb(0.53, 0.53, 0.53)))
+        .insert_resource(ClearColor(Color::MIDNIGHT_BLUE * 0.1))
         .insert_resource(LogDesync::new(10.))
         .add_systems(OnEnter(GameState::Matchmaking), start_matchbox_socket)
         .add_systems(OnEnter(GameState::InGame), setup_local_players)
@@ -81,8 +81,8 @@ fn setup_local_players(
 ) {
     cameras.for_each(|camera| commands.entity(camera).despawn_recursive());
     for (player, &Player { handle }) in &players {
-        let transform = Transform::from_translation(Vec3::new(0., 3.4, 6.5))
-            .with_rotation(Quat::from_rotation_x(TAU * -0.04));
+        let transform = Transform::from_translation(Vec3::new(0., 3.4, 5.0))
+            .with_rotation(Quat::from_rotation_x(TAU * -0.049));
         for &local_player in &local_players.0 {
             if local_player == handle {
                 commands.entity(player).with_children(|child| {
