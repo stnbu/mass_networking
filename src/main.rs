@@ -246,7 +246,6 @@ fn spawn_players(
         let collider_size = PLAYER_SIZE / 2.;
         commands
             .spawn((
-                Name::new(format!("Player {}", attr.handle)),
                 RigidBody::Dynamic,
                 ActiveEvents::COLLISION_EVENTS,
                 Sensor::default(),
@@ -472,7 +471,6 @@ fn fire_projectile(
             let spawn_location = transform.translation + forward * PLAYER_SIZE * 1.65;
             commands
                 .spawn((
-                    Name::new(format!("Projectile from {}", player.handle)),
                     EntityTTL::new(2.),
                     RigidBody::Dynamic,
                     Collider::ball(PROJECTILE_RADIUS),

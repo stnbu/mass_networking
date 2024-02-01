@@ -20,31 +20,10 @@ pub trait ArchAppExt {
 }
 
 impl ArchAppExt for App {
-    /*use bevy::{prelude::*,log::LogPlugin};
-    use bevy_dev_console::prelude::*;
-
-    App::new()
-        .add_plugins((
-            ConsoleLogPlugin::default(),
-            DefaultPlugins.build().disable::<LogPlugin>(),
-            DevConsolePlugin,
-        ))
-        .run(); */
-    //#[cfg(debug_assertions)]
     fn arch_build(&mut self) -> &mut Self {
         let args = Args::parse();
-        if cfg!(debug_assertions) {
-            use bevy::log::LogPlugin;
-            use bevy_dev_console::prelude::*;
-            self.add_plugins((
-                ConsoleLogPlugin::default(),
-                DefaultPlugins.build().disable::<LogPlugin>(),
-                DevConsolePlugin,
-            ));
-        } else {
-            self.add_plugins(DefaultPlugins);
-        }
-        self.insert_resource(args)
+        self.add_plugins(DefaultPlugins)
+            .insert_resource(args)
             // FIXME: Called in every frame; system checks WindowCreated event queue length.
             .add_systems(Update, position_window)
     }
