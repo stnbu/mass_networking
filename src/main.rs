@@ -14,8 +14,6 @@ mod input;
 mod arch;
 use arch::ArchAppExt;
 
-mod boid;
-
 const PLAYER_SIZE: f32 = 1.;
 const PROJECTILE_RADIUS: f32 = 0.05;
 
@@ -58,7 +56,6 @@ fn main() {
         )
         .add_systems(ReadInputs, read_local_inputs)
         .add_systems(Startup, spawn_players)
-        .add_systems(Startup, boid::boid)
         .add_systems(
             GgrsSchedule,
             (
