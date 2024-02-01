@@ -63,6 +63,7 @@ fn main() {
                 fire_projectile.after(rotate_players),
                 move_projectile.after(fire_projectile),
                 handle_projectile_collision.after(move_projectile),
+                kill_aged_entities.after(handle_projectile_collision),
             ),
         )
         .insert_resource(RapierConfiguration {
@@ -81,7 +82,7 @@ fn setup_local_players(
 ) {
     cameras.for_each(|camera| commands.entity(camera).despawn_recursive());
     for (player, &Player { handle }) in &players {
-        let transform = Transform::from_translation(Vec3::new(0., 3.4, 5.0))
+        let transform = Transform::from_translation(Vec3::new(0., 3.4, 4.0))
             .with_rotation(Quat::from_rotation_x(TAU * -0.049));
         for &local_player in &local_players.0 {
             if local_player == handle {
@@ -96,22 +97,48 @@ fn setup_local_players(
     }
 }
 
-fn handle_projectile_collision(mut events: EventReader<CollisionEvent>, named: Query<&Name>) {
+fn handle_projectile_collision(
+    mut events: EventReader<CollisionEvent>,
+    projectiles: Query<&Transform, With<Projectile>>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     for event in events.read() {
-        let (a, b, flags, kind) = match event {
-            // two arbitrary names for the elements!! -- foo and bar
-            &CollisionEvent::Started(a, b, flags) => (a, b, flags, "started"),
-            &CollisionEvent::Stopped(a, b, flags) => (a, b, flags, "stopped"),
-        };
-        let get_name = |entity| match named.get(entity) {
-            Ok(name) => format!("{name} [{entity:?}]"),
-            Err(err) => format!("{err}"),
-        };
-        println!(
-            "Collision {kind}! -- `{}` vs `{}` ({flags:?})",
-            get_name(a),
-            get_name(b)
-        );
+        match event {
+            &CollisionEvent::Started(a, b, _) => {
+                let (entity, transform) = match (projectiles.get(a), projectiles.get(b)) {
+                    (Err(_), Ok(transform)) => (b, *transform),
+                    (Ok(transform), Err(_)) => (a, *transform),
+                    (Err(_), Err(_)) => {
+                        warn!("Collision of two non-projectiles");
+                        return;
+                    }
+                    (Ok(_), Ok(_)) => {
+                        warn!("Collision of two projectiles");
+                        return;
+                    }
+                };
+                commands.entity(entity).despawn_recursive();
+                // "explosion"
+                commands.spawn((
+                    EntityTTL::new(0.2),
+                    PbrBundle {
+                        mesh: meshes.add(
+                            Mesh::try_from(shape::Icosphere {
+                                radius: PLAYER_SIZE / 5.,
+                                ..Default::default()
+                            })
+                            .unwrap(),
+                        ),
+                        material: materials.add(Color::PINK.into()),
+                        transform,
+                        ..Default::default()
+                    },
+                ));
+            }
+            _ => {}
+        }
     }
 }
 
@@ -296,8 +323,12 @@ fn wait_for_players(
     mut socket: ResMut<MatchboxSocket<SingleChannel>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if socket.get_channel(0).is_err() {
-        return;
+    match socket.get_channel(0) {
+        Ok(_) => {}
+        Err(err) => {
+            error!("When trying to get channel: {err:?}");
+            return;
+        }
     }
 
     socket.update_peers();
@@ -327,6 +358,29 @@ fn wait_for_players(
 
     commands.insert_resource(bevy_ggrs::Session::P2P(ggrs_session));
     next_state.set(GameState::InGame);
+}
+
+#[derive(Component)]
+struct EntityTTL(Timer);
+
+impl EntityTTL {
+    fn new(interval: f32) -> Self {
+        Self(Timer::from_seconds(interval, TimerMode::Repeating))
+    }
+}
+
+fn kill_aged_entities(
+    mut entities: Query<(Entity, &mut EntityTTL)>,
+    mut commands: Commands,
+    time: Res<Time>,
+) {
+    let delta = time.delta();
+    for (entity, mut entity_ttl) in entities.iter_mut() {
+        entity_ttl.0.tick(delta);
+        if entity_ttl.0.just_finished() {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
 }
 
 #[derive(Resource, Clone)]
@@ -419,6 +473,7 @@ fn fire_projectile(
             commands
                 .spawn((
                     Name::new(format!("Projectile from {}", player.handle)),
+                    EntityTTL::new(2.),
                     RigidBody::Dynamic,
                     Collider::ball(PROJECTILE_RADIUS),
                     ActiveEvents::COLLISION_EVENTS,
