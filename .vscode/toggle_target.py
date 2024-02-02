@@ -31,6 +31,6 @@ def toggle_target(settings_path, targets):
 # Assuming the script is run from the crate root
 crate_root = os.getcwd()  # Gets the current working directory
 settings_path = os.path.join(crate_root, ".vscode", "settings.json")
-targets = ["wasm32-unknown-unknown", "aarch64-apple-darwin"]
+targets = ["wasm32-unknown-unknown"]
 
 toggle_target(settings_path, targets)

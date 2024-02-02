@@ -10,9 +10,6 @@ use input::*;
 mod components;
 mod input;
 
-mod arch;
-use arch::*;
-
 const PLAYER_SIZE: f32 = 1.;
 const PROJECTILE_RADIUS: f32 = 0.05;
 
@@ -26,15 +23,24 @@ enum GameState {
 }
 
 fn main() {
-    let resolution = get_primary_monitor_size();
-    App::new()
-        .add_plugins(SizedWindowPlugin { resolution })
+    let mut app = App::new();
+    #[cfg(target_arch = "wasm32")]
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            fit_canvas_to_parent: true,
+            ..default()
+        }),
+        ..default()
+    }));
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_plugins(native::SizedWindowPlugin);
+
+    app.add_plugins(GgrsPlugin::<Config>::default())
         .insert_resource(AmbientLight {
             brightness: 1.0,
             ..default()
         })
         // --
-        .add_plugins(GgrsPlugin::<Config>::default())
         .rollback_component_with_clone::<Transform>()
         .rollback_component_with_copy::<Player>()
         .rollback_component_with_copy::<MoveDir>()
