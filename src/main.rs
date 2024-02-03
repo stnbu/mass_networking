@@ -34,6 +34,8 @@ fn main() {
     }));
     #[cfg(not(target_arch = "wasm32"))]
     app.add_plugins(dev::native::SizedWindowPlugin);
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_systems(Update, dev::niceties::exits);
 
     app.add_plugins(GgrsPlugin::<Config>::default())
         .insert_resource(AmbientLight {
